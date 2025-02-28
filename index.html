@@ -1,194 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terminal</title>
-    <style>
-        body {
-            background-color: black;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            padding: 10px;
-            height: 100vh;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-        
-        #terminal {
-            height: 100%;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            padding-bottom: 2em;
-        }
-        
-        #input-line {
-            display: flex;
-            align-items: center;
-        }
-        
-        #prompt {
-            margin-right: 5px;
-        }
-        
-        #command-input {
-            flex: 1;
-            background-color: transparent;
-            border: none;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            font-size: 1em;
-            outline: none;
-            caret-color: #00ff00;
-        }
-        
-        .cursor {
-            display: inline-block;
-            width: 0.6em;
-            height: 1em;
-            background-color: #00ff00;
-            animation: blink 1s step-end infinite;
-            margin-left: 2px;
-            vertical-align: middle;
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-    </style>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>GKTTA Command Line Interface</title>
+<meta name="title" content="GKTTA Command Line Interface">
+<meta name="description" content="Golden Key Time Travel Agency Command Line">
+<link href="css/style.css" rel="stylesheet">
+<meta name="viewport" content="fullscreen=yes">
+<script src="js/fullscreen.js"></script>
 </head>
+
 <body>
-    <div id="terminal"></div>
-    
-    <script>
-        const terminal = document.getElementById('terminal');
-        let history = [];
-        let historyIndex = -1;
-        
-        // Add initial welcome message
-        appendOutput("Welcome to Terminal v1.0.0\nType 'help' for available commands.\n");
-        
-        // Create and append input line
-        createInputLine();
-        
-        function createInputLine() {
-            const inputLine = document.createElement('div');
-            inputLine.id = 'input-line';
-            
-            const prompt = document.createElement('span');
-            prompt.id = 'prompt';
-            prompt.textContent = '$ ';
-            
-            const commandInput = document.createElement('input');
-            commandInput.id = 'command-input';
-            commandInput.type = 'text';
-            commandInput.autofocus = true;
-            
-            inputLine.appendChild(prompt);
-            inputLine.appendChild(commandInput);
-            
-            terminal.appendChild(inputLine);
-            
-            commandInput.focus();
-            
-            // Event listeners
-            commandInput.addEventListener('keydown', handleKeyDown);
-        }
-        
-        function handleKeyDown(event) {
-            const commandInput = document.getElementById('command-input');
-            
-            if (event.key === 'Enter') {
-                const command = commandInput.value;
-                
-                // Add command to history
-                if (command.trim() !== '') {
-                    history.push(command);
-                    historyIndex = history.length;
-                }
-                
-                // Display command in terminal
-                appendOutput('$ ' + command + '\n');
-                
-                // Process command
-                processCommand(command);
-                
-                // Remove input line
-                const inputLine = document.getElementById('input-line');
-                terminal.removeChild(inputLine);
-                
-                // Create new input line
-                createInputLine();
-                
-                event.preventDefault();
-            } else if (event.key === 'ArrowUp') {
-                // Navigate history (previous command)
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    commandInput.value = history[historyIndex];
-                }
-                event.preventDefault();
-            } else if (event.key === 'ArrowDown') {
-                // Navigate history (next command)
-                if (historyIndex < history.length - 1) {
-                    historyIndex++;
-                    commandInput.value = history[historyIndex];
-                } else if (historyIndex === history.length - 1) {
-                    historyIndex = history.length;
-                    commandInput.value = '';
-                }
-                event.preventDefault();
-            }
-        }
-        
-        function processCommand(command) {
-            const cmd = command.trim().toLowerCase();
-            
-            if (cmd === '') {
-                return;
-            } else if (cmd === 'help') {
-                appendOutput('Available commands:\n');
-                appendOutput('  help     - Display this help message\n');
-                appendOutput('  clear    - Clear the terminal\n');
-                appendOutput('  date     - Display current date and time\n');
-                appendOutput('  echo     - Echo the input\n');
-                appendOutput('  whoami   - Display current user\n');
-            } else if (cmd === 'clear') {
-                clearTerminal();
-            } else if (cmd === 'date') {
-                appendOutput(new Date().toString() + '\n');
-            } else if (cmd.startsWith('echo ')) {
-                appendOutput(command.substring(5) + '\n');
-            } else if (cmd === 'whoami') {
-                appendOutput('guest\n');
-            } else {
-                appendOutput('Command not found: ' + command + '\n');
-                appendOutput('Type "help" for available commands.\n');
-            }
-        }
-        
-        function appendOutput(text) {
-            const output = document.createElement('div');
-            output.textContent = text;
-            terminal.insertBefore(output, document.getElementById('input-line'));
-            
-            // Scroll to bottom
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-        
-        function clearTerminal() {
-            // Remove all children except the input line
-            while (terminal.firstChild !== document.getElementById('input-line')) {
-                terminal.removeChild(terminal.firstChild);
-            }
-        }
-        
-        // Keep focus on input
-        document.addEventListener('click', function() {
-            document.getElementById('command-input').focus();
-        });
-    </script>
+
+<main>
+<section id="home">
+<h2>GKTTA> Golden Key Time Travel Agency</h2>
+<p>V 1.2.2245.67</p>
+<p><span>Type 'help' + <kbd>Enter</kbd> -- for available commands.</span></p>
+</section>
+
+<section id="SNOWCAT">
+<h2><span>&raquo;***WARNING***</span></h2>
+<p>
+<br>
+<br>
+<br>
+NOW DELETING ALL DATA 
+<br>
+THIS ACTION CAN NOT BE UNDONE AND MAY RESULT IN ABNORMAL BEHAVIOR OF TIME machine
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+ACTION COMPLETED
+</p>
+</section>
+
+<section id="MOONBEAM">
+<h2><span>&raquo;***WARNING***</span></h2>
+<p>
+<br>
+<br>
+<br>
+STARTING TIME MACHINE 
+<br>
+
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+*
+<br>
+ACTION COMPLETED
+</p>
+</section>
+
+<section id="backend">
+<h2><span>&raquo;GKTTA STARTUP SEQUENCE</span></h2>
+<p>[Initiating Temporal Flux Engine]
+-> Initializing temporal synchronization modules...
+-> Establishing connection to the chronosphere...
+-> Loading temporal navigation algorithms...
+-> Calibrating temporal distortion field generators...
+-> Activating temporal shielding systems...
+-> Synchronizing quantum entanglement protocols...
+-> Preparing for temporal displacement...
+[Startup Procedure Alpha-Bravo-Charlie Complete]
+<br>
+<br>
+ENTER TRAVEL PASSCODE TO INITIATE TRAVEL
+<br>
+ENTER EMERGENCY STOP CODE TO DELETE ALL DATA
+
+
+</p>
+</section>
+
+<section id="login">
+  <h2><span>&raquo;To log into the system, enter your username in all lowercase letters.</span></h2>
+  </section>
+
+	
+<section id="error">
+<p>Command not found!<p> 
+<p><span>Type 'help' + <kbd>Enter</kbd> -- for available commands.</span></p>
+</section>
+
+<section id="help">
+<h2><span>&raquo;Help?</span></h2>
+<p><span>Type [command] + <kbd>Enter</kbd></span></p>
+<ul>
+<li>'home' -- Return to home screen</li>
+<li>'backend' -- time machine backend</li>
+<li>'manual' -- time machine manual</li>
+<li>'help' -- displays this list</li>
+</ul>
+</section>
+
+<section id="manual">
+<h2><span>&raquo;Help?</span></h2>
+<p><span>Type [command] + <kbd>Enter</kbd></span></p>
+<a href="GKTTA Internal Document.pdf">Download PDF</a>
+<ul>
+
+</ul>
+</section>
+
+<span class="command">GKTTA:/$<input type="text"></span>
+</main>
+
+<script src="js/app.js"></script>
 </body>
 </html>
