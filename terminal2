@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKTTA - Golden Key Time Travel Agency</title>
+    <style>
+        html, body {
+            background-color: #0d0d0d;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #terminal-output {
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        #prompt {
+            color: #00ff00;
+            margin-right: 8px;
+        }
+
+        #terminal-input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            outline: none;
+            flex-grow: 1;
+        }
+
+        a {
+            color: #00aaff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #ascii-art {
+            white-space: pre;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .blink {
+            animation: blink-animation 1s steps(2, start) infinite;
+        }
+
+        @keyframes blink-animation {
+            to {
+                visibility: hidden;
+            }
+        }
+        
+        #fullscreen-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        
+        .time-machine-status {
+            border: 1px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: rgba(0, 255, 0, 0.1);
+        }
+        
+        .warning {
+            color: #ff9900;
+        }
+        
+        .error {
+            color: #ff0000;
+        }
+        
+        .success {
+            color: #00ffaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="terminal-output"></div>
+        <div class="input-area">
+            <div id="prompt">$</div>
+            <input type="text" id="terminal-input" autofocus spellcheck="false">
+        </div>
+    </div>
+    
+    <button id="fullscreen-btn">Full Screen</button>
+
+    <script>
+        // Terminal configuration
+        const config = {
+            promptSymbol: '$',
+            welcomeMessage: `Welcome to the Golden Key Time Travel Agency Terminal v2.3.7
+AUTHORIZED PERSONNEL ONLY
+Type 'help' for available commands.
+
+`,
+            asciiArt: `
+  _____  _  _______ _______  _    
+ / ____|| |/ /_   _|__   __|| |   
+| |  __|| ' /  | |    | |   | |_  __ _ 
+| | |_ || <    | |    | |   | __|/ _' |
+| |__| || . \\ _| |_   | |   | |_| (_| |
+ \\_____||_|\\_\\_____|  |_|    \\__|\\__,_|
+
+GOLDEN KEY TIME TRAVEL AGENCY
+SYSTEM TERMINAL - CLASSIFIED
+`
+        };
+
+        // DOM elements
+        const terminalOutput = document.getElementById('terminal-output');
+        const terminalInput = document.getElementById('terminal-input');
+        const prompt = document.getElementById('prompt');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+        // Terminal state
+        const commandHistory = [];
+        let historyIndex = -1;
+        let isPasswordMode = false;
+        let passwordCallback = null;
+        let timeMachineStatus = {
+            power: false,
+            destination: null,
+            coordinates: null,
+            fuelLevel: 86,
+            systemIntegrity: 92,
+            calibration: "uncalibrated",
+            timeCoilStatus: "stable"
+        };
+        let isLoggedIn = false;
+        let currentUser = "guest";
+
+        // Initialize terminal
+        function initTerminal() {
+            writeToTerminal(config.asciiArt);
+            writeToTerminal(config.welcomeMessage);
+            terminalInput.focus();
+        }
+
+        // Write text to terminal
+        function writeToTerminal(text, withPrompt = false) {
+            if (withPrompt) {
+                terminalOutput.innerHTML += `<div>${config.promptSymbol} ${text}</div>`;
+            } else {
+                terminalOutput.innerHTML += text;
+            }
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        // Clear terminal
+        function clearTerminal() {
+            terminalOutput.innerHTML = '';
+        }
+
+        // Command processing
+        terminalInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const input = terminalInput.value;
+                
+                if (isPasswordMode && passwordCallback) {
+                    writeToTerminal('********\n', true);
+                    const pass = input;
+                    isPasswordMode = false;
+                    terminalInput.type = 'text';
+                    passwordCallback(pass);
+                } else {
+                    // Add to history and output
+                    if (input.trim() !== '') {
+                        commandHistory.push(input);
+                        historyIndex = commandHistory.length;
+                    }
+                    writeToTerminal(input + '\n', true);
+                    
+                    // Process command
+                    processCommand(input);
+                }
+                
+                // Clear input
+                terminalInput.value = '';
+            } 
+            else if (e.key === 'ArrowUp') {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    terminalInput.value = commandHistory[historyIndex];
+                }
+                e.preventDefault();
+            } 
+            else if (e.key === 'ArrowDown') {
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    terminalInput.value = commandHistory[historyIndex];
+                } else {
+                    terminalInput.value = '';
+                    historyIndex = commandHistory.length;
+                }
+                e.preventDefault();
+            }
+        });
+
+        // Password mode function
+        function askPassword(callback) {
+            isPasswordMode = true;
+            terminalInput.type = 'password';
+            writeToTerminal('Enter password: ', true);
+            passwordCallback = callback;
+        }
+
+        // Process commands
+        function processCommand(command) {
+            const cmd = command.trim().toLowerCase();
+            const args = cmd.split(' ');
+            const mainCmd = args[0];
+            
+            if (cmd === '') {
+                return;
+            } else if (cmd === 'help') {
+                if (isLoggedIn) {
+                    writeToTerminal(`Available commands (Agent access):
+  help                  - Display this help message
+  clear                 - Clear the terminal
+  about                 - About GKTTA
+  date                  - Display current date and time
+  echo [text]           - Echo the input
+  whoami                - Display current user
+  logout                - Log out from the system
+  ls                    - List directory contents
+  cat [file]            - View file contents
+  status                - Time machine status
+  power [on|off]        - Control time machine power
+  calibrate             - Calibrate time machine
+  set-destination [year]- Set time destination
+  set-coordinates [x,y] - Set spatial coordinates
+  initiate              - Initiate time travel sequence
+  diagnostics           - Run system diagnostics
+  maintenance           - Access maintenance tools
+  manual                - Access the time machine manual
+  links                 - Show important links
+`);
+                } else {
+                    writeToTerminal(`Available commands:
+  help       - Display this help message
+  clear      - Clear the terminal
+  about      - About GKTTA
+  date       - Display current date and time
+  echo [text]- Echo the input
+  whoami     - Display current user
+  login      - Login to GKTTA system
+  ls         - List directory contents
+  cat [file] - View file contents
+  links      - Show important links
+`);
+                }
+            } else if (cmd === 'clear') {
+                clearTerminal();
+            } else if (cmd === 'about') {
+                writeToTerminal(`Golden Key Time Travel Agency (GKTTA)
+
+Established in 2023, the Golden Key Time Travel Agency is a classified governmental organization dedicated to temporal exploration and research.
+
+Our mission is to explore the past and future for scientific advancement while maintaining the integrity of the timeline. All operations are strictly classified and conducted under Protocol Omega-7.
+
+Current Director: Dr. Eleanor Richards
+Operational Status: Active
+Temporal Incursions Completed: 37
+Current Timeline Stability: 98.7%
+`);
+            } else if (cmd === 'date') {
+                writeToTerminal(new Date().toString() + '\n');
+            } else if (cmd.startsWith('echo ')) {
+                writeToTerminal(command.substring(5) + '\n');
+            } else if (cmd === 'whoami') {
+                writeToTerminal(`${currentUser}\n`);
+            } else if (cmd === 'login') {
+                askPassword(function(password) {
+                    if (password === "timetravel2023") {
+                        isLoggedIn = true;
+                        currentUser = "agent_alpha";
+                        writeToTerminal(`Login successful. Welcome, Agent Alpha.
+Security Clearance: Level 4
+Timeline Access: Full
+Last Login: ${new Date().toLocaleString()}\n`);
+                    } else {
+                        writeToTerminal('Login failed. Invalid credentials.\n');
+                    }
+                });
+            } else if (cmd === 'logout' && isLoggedIn) {
+                isLoggedIn = false;
+                currentUser = "guest";
+                writeToTerminal('Logged out successfully.\n');
+            } else if (cmd === 'ls') {
+                if (isLoggedIn) {
+                    writeToTerminal(`README.md
+about.txt
+manual.pdf
+time_machine.cfg
+security_protocols.dat
+mission_logs/ [directory]
+calibration/ [directory]
+maintenance/ [directory]
+`);
+                } else {
+                    writeToTerminal(`README.md
+about.txt
+public_info.txt
+contact.dat
+resources/ [directory]
+`);
+                }
+            } else if (cmd.startsWith('cat ')) {
+                const file = args.slice(1).join(' ').toLowerCase();
+                if (file === 'readme.md') {
+                    writeToTerminal(`# GKTTA Terminal Interface
+
+GOLDEN KEY TIME TRAVEL AGENCY
+CLASSIFIED TERMINAL SYSTEM v2.3.7
+
+This terminal provides access to the time machine control interface and related GKTTA systems.
+Unauthorized access is prohibited by federal law and may result in temporal displacement.
+
+## Security Notice
+All commands and operations are logged and monitored.
+Timeline integrity must be maintained at all costs.
+`);
+                } else if (file === 'about.txt') {
+                    writeToTerminal(`Golden Key Time Travel Agency
+
+The Golden Key Time Travel Agency (GKTTA) operates under the highest levels of government secrecy to explore and document the timeline.
+
+Our agents are handpicked from various scientific and military backgrounds, and undergo extensive training in temporal mechanics, historical knowledge, and paradox prevention.
+
+The Golden Key technology is based on Dr. Eliza Hawthorne's breakthrough discovery of temporal field manipulation in 2021, allowing for controlled jumps through the time stream.
+`);
+                } else if (file === 'manual.pdf') {
+                    if (isLoggedIn) {
+                        writeToTerminal(`TIME MACHINE OPERATION MANUAL
+Version 3.2
+
+I. SAFETY PROTOCOLS
+- Never initiate time travel without proper calibration
+- Minimum fuel level of 30% required for return trip
+- Maintain biological shielding at all times
+- Avoid contact with past/future self
+
+II. OPERATION SEQUENCE
+1. Power on system
+2. Run diagnostics
+3. Calibrate temporal coils
+4. Set destination date and coordinates
+5. Verify timeline integrity forecast
+6. Initiate time jump sequence
+7. Upon arrival, activate temporal anchor
+
+III. EMERGENCY PROCEDURES
+- System Failure: Activate emergency return beacon
+- Paradox Detection: Implement Protocol Omega
+- Timeline Contamination: Execute memory restoration
+
+IV. MAINTENANCE
+- Temporal coils require recalibration after every 5 jumps
+- Quantum stabilizers must be replaced bi-annually
+- Biological filters should be cleaned after each use
+
+For complete documentation, view the full manual at your local terminal or access the PDF at our secure repository.
+
+Link to full PDF manual: <a href="https://popvoxmatt.github.io/GKTTA/time-machine-manual.pdf" target="_blank">Time Machine Manual</a>
+`);
+                    } else {
+                        writeToTerminal('Error: Access denied. This file requires agent credentials.\n');
+                    }
+                } else if (file === 'time_machine.cfg') {
+                    if (isLoggedIn) {
+                        writeToTerminal(`# Time Machine Configuration
+# Last updated: ${new Date().toLocaleDateString()}
+
+POWER_THRESHOLD=0.85
+TEMPORAL_FREQUENCY=18.75Hz
+SPATIAL_VARIANCE=0.0002
+QUANTUM_STABILIZATION=TRUE
+MAX_TIME_DISPLACEMENT=150y
+BIOLOGICAL_SHIELDING=ACTIVE
+PARADOX_DETECTION=ENABLED
+MEMORY_SYSTEMS=ONLINE
+RETURN_BEACON=CALIBRATED
+
+# WARNING: Do not modify these settings without authorization
+`);
+                    } else {
+                        writeToTerminal('Error: Access denied. This file requires agent credentials.\n');
+                    }
+                } else if (file === 'public_info.txt') {
+                    writeToTerminal(`Golden Key Travel Agency
+
+Welcome to Golden Key Travel Agency, your premier destination for extraordinary travel experiences.
+
+We specialize in exclusive, once-in-a-lifetime journeys to unique destinations. Our expert travel agents will customize your trip to match your specific interests and needs.
+
+For more information, please contact our office or visit our website.
+
+NOTE: This is a public-facing cover for GKTTA operations.
+`);
+                } else {
+                    writeToTerminal(`cat: ${file}: No such file or directory\n`);
+                }
+            } else if (cmd === 'status' && isLoggedIn) {
+                displayTimeMachineStatus();
+            } else if (cmd.startsWith('power ') && isLoggedIn) {
+                const powerState = args[1]?.toLowerCase();
+                if (powerState === 'on') {
+                    timeMachineStatus.power = true;
+                    writeToTerminal(`
+<span class="success">Time machine power initiated.</span>
+Temporal field generators: ACTIVE
+Power consumption: 1.21 gigawatts
+Core temperature: 37°C and stable
+Ready for calibration.
+`);
+                } else if (powerState === 'off') {
+                    timeMachineStatus.power = false;
+                    timeMachineStatus.calibration = "uncalibrated";
+                    writeToTerminal(`
+<span class="warning">Time machine powering down...</span>
+Temporal field collapsing
+Power systems offline
+System in standby mode
+`);
+                } else {
+                    writeToTerminal(`Usage: power [on|off]\n`);
+                }
+            } else if (cmd === 'calibrate' && isLoggedIn) {
+                if (timeMachineStatus.power) {
+                    writeToTerminal(`
+Initiating calibration sequence...
+<span class="blink">Scanning temporal reference points...</span>
+`);
+                    setTimeout(() => {
+                        timeMachineStatus.calibration = "calibrated";
+                        writeToTerminal(`
+Calibration complete.
+Temporal accuracy: 99.7%
+Spatial variance: 0.0003
+Quantum stability: Optimal
+Time machine is ready for destination input.
+`);
+                    }, 2000);
+                } else {
+                    writeToTerminal(`<span class="error">Error: Time machine power is off. Please power on the system first.</span>\n`);
+                }
+            } else if (cmd.startsWith('set-destination ') && isLoggedIn) {
+                if (!timeMachineStatus.power) {
+                    writeToTerminal(`<span class="error">Error: Time machine power is off. Please power on the system first.</span>\n`);
+                    return;
+                }
+                
+                const year = args[1];
+                if (!isNaN(year)) {
+                    timeMachineStatus.destination = parseInt(year);
+                    writeToTerminal(`
+Destination year set: ${year}
+Timeline integrity scan: ${Math.floor(Math.random() * 10) + 90}% stable
+Historical significance: ${Math.random() > 0.5 ? 'High' : 'Moderate'}
+Calculating butterfly effect potential...
+Temporal jump ready to be configured.
+`);
+                } else {
+                    writeToTerminal(`<span class="error">Error: Invalid year format. Please enter a numerical year.</span>\n`);
+                }
+            } else if (cmd.startsWith('set-coordinates ') && isLoggedIn) {
+                if (!timeMachineStatus.power) {
+                    writeToTerminal(`<span class="error">Error: Time machine power is off. Please power on the system first.</span>\n`);
+                    return;
+                }
+                
+                const coordinates = args[1];
+                if (coordinates && coordinates.includes(',')) {
+                    timeMachineStatus.coordinates = coordinates;
+                    writeToTerminal(`
+Spatial coordinates set: ${coordinates}
+Location verified: ${Math.random() > 0.5 ? 'Safe' : 'Caution advised'}
+Terrain analysis: Complete
+Environmental conditions: ${Math.random() > 0.7 ? 'Optimal' : 'Acceptable'}
+`);
+                } else {
+                    writeToTerminal(`<span class="error">Error: Invalid coordinate format. Please use x,y format.</span>\n`);
+                }
+            } else if (cmd === 'initiate' && isLoggedIn) {
+                if (!timeMachineStatus.power) {
+                    writeToTerminal(`<span class="error">Error: Time machine power is off. Please power on the system first.</span>\n`);
+                    return;
+                }
+                
+                if (timeMachineStatus.calibration !== "calibrated") {
+                    writeToTerminal(`<span class="error">Error: Time machine is not calibrated. Run calibration first.</span>\n`);
+                    return;
+                }
+                
+                if (!timeMachineStatus.destination) {
+                    writeToTerminal(`<span class="error">Error: No destination set. Use set-destination command first.</span>\n`);
+                    return;
+                }
+                
+                if (!timeMachineStatus.coordinates) {
+                    writeToTerminal(`<span class="error">Error: No coordinates set. Use set-coordinates command first.</span>\n`);
+                    return;
+                }
+                
+                writeToTerminal(`
+<span class="warning">INITIATING TIME TRAVEL SEQUENCE</span>
+
+Destination: ${timeMachineStatus.destination}
+Coordinates: ${timeMachineStatus.coordinates}
+Fuel level: ${timeMachineStatus.fuelLevel}%
+System integrity: ${timeMachineStatus.systemIntegrity}%
+
+<span class="blink">Generating temporal field...</span>
+`);
+                
+                setTimeout(() => {
+                    writeToTerminal(`
+<span class="blink">Quantum particles accelerating...</span>
+`);
+                }, 1500);
+                
+                setTimeout(() => {
+                    writeToTerminal(`
+<span class="blink">Timeline breach in progress...</span>
+`);
+                }, 3000);
+                
+                setTimeout(() => {
+                    timeMachineStatus.fuelLevel -= Math.floor(Math.random() * 10) + 5;
+                    writeToTerminal(`
+<span class="success">TIME JUMP SUCCESSFUL</span>
+
+You have arrived at: ${timeMachineStatus.destination}
+Location: ${timeMachineStatus.coordinates}
+Local time: ${new Date().toLocaleTimeString()}
+Temporal anchor: Active
+Return window: 72 hours
+
+REMEMBER PROTOCOL OMEGA: Do not alter the timeline.
+`);
+                }, 5000);
+            } else if (cmd === 'diagnostics' && isLoggedIn) {
+                writeToTerminal(`
+Running system diagnostics...
+`);
+                
+                setTimeout(() => {
+                    const randomIssue = Math.random() > 0.7;
+                    if (randomIssue) {
+                        timeMachineStatus.systemIntegrity -= Math.floor(Math.random() * 5) + 1;
+                        timeMachineStatus.timeCoilStatus = "degraded";
+                        writeToTerminal(`
+Diagnostic complete.
+
+<span class="warning">WARNING: Issues detected.</span>
+
+Power systems: OK
+Temporal coils: Degraded (87% efficiency)
+Quantum stabilizers: OK
+Biological filters: Need cleaning
+Navigation systems: OK
+Memory banks: OK
+
+Recommended action: Run maintenance on temporal coils.
+`);
+                    } else {
+                        writeToTerminal(`
+Diagnostic complete.
+
+All systems nominal.
+
+Power systems: OK
+Temporal coils: OK
+Quantum stabilizers: OK
+Biological filters: OK
+Navigation systems: OK
+Memory banks: OK
+
+Time machine is operating within optimal parameters.
+`);
+                    }
+                }, 2000);
+            } else if (cmd === 'maintenance' && isLoggedIn) {
+                writeToTerminal(`
+Maintenance Interface
+
+1. Clean biological filters
+2. Recalibrate temporal coils
+3. Replace quantum stabilizers
+4. Update navigation database
+5. Run system optimization
+
+Enter maintenance task number or use:
+maintenance run [task-number]
+`);
+            } else if (cmd.startsWith('maintenance run ') && isLoggedIn) {
+                const taskNumber = args[2];
+                if (taskNumber === '1') {
+                    writeToTerminal(`
+Cleaning biological filters...
+Contaminants removed.
+Biological safety rating restored to 100%.
+`);
+                } else if (taskNumber === '2') {
+                    writeToTerminal(`
+Recalibrating temporal coils...
+Alignment optimized.
+Efficiency improved by 7%.
+`);
+                    timeMachineStatus.timeCoilStatus = "stable";
+                    timeMachineStatus.systemIntegrity = Math.min(100, timeMachineStatus.systemIntegrity + 5);
+                } else if (taskNumber === '3') {
+                    writeToTerminal(`
+<span class="error">Error: This maintenance task requires physical components.</span>
+Please requisition new quantum stabilizers from inventory.
+`);
+                } else if (taskNumber === '4') {
+                    writeToTerminal(`
+Updating navigation database...
+Downloaded 37 new historical landmarks.
+Timeline accuracy improved to 99.9%.
+`);
+                } else if (taskNumber === '5') {
+                    writeToTerminal(`
+Running system optimization...
+Defragmenting memory banks...
+Optimizing power flow...
+Recalculating temporal equations...
+System performance improved by 3%.
+`);
+                } else {
+                    writeToTerminal(`<span class="error">Error: Invalid task number.</span>\n`);
+                }
+            } else if (cmd === 'manual') {
+                writeToTerminal(`Accessing Time Machine Manual...
+
+The full manual is available as a PDF: <a href="https://popvoxmatt.github.io/GKTTA/time-machine-manual.pdf" target="_blank">Time Machine Manual</a>
+
+Quick reference guide:
+1. Power on system using "power on" command
+2. Run diagnostics using "diagnostics" command
+3. Calibrate the time machine using "calibrate" command
+4. Set destination year using "set-destination YYYY" command
+5. Set coordinates using "set-coordinates X,Y" command
+6. Initiate time jump using "initiate" command
+
+Always follow Protocol Omega to preserve timeline integrity.
+`);
+            } else if (cmd === 'links') {
+                writeToTerminal(`Important Links:
+- <a href="https://popvoxmatt.github.io/GKTTA/" target="_blank">GKTTA Public Portal</a>
+- <a href="https://popvoxmatt.github.io/GKTTA/time-machine-manual.pdf" target="_blank">Time Machine Manual</a>
+- <a href="https://github.com/popvoxmatt/GKTTA" target="_blank">GitHub Repository</a>
+`);
+            } else {
+                writeToTerminal(`Command not found: ${command}
+Type "help" for available commands.\n`);
+            }
+        }
+        
+        // Display time machine status
+        function displayTimeMachineStatus() {
+            writeToTerminal(`
+<div class="time-machine-status">
+TIME MACHINE STATUS
+
+Power: ${timeMachineStatus.power ? '<span class="success">ONLINE</span>' : '<span class="error">OFFLINE</span>'}
+Destination Year: ${timeMachineStatus.destination || 'Not set'}
+Coordinates: ${timeMachineStatus.coordinates || 'Not set'}
+Fuel Level: ${timeMachineStatus.fuelLevel}%
+System Integrity: ${timeMachineStatus.systemIntegrity}%
+Calibration: ${timeMachineStatus.calibration === "calibrated" ? '<span class="success">CALIBRATED</span>' : '<span class="warning">UNCALIBRATED</span>'}
+Temporal Coil Status: ${timeMachineStatus.timeCoilStatus === "stable" ? '<span class="success">STABLE</span>' : '<span class="warning">DEGRADED</span>'}
+</div>
+`);
+        }
+
+        // Fullscreen functionality
+        fullscreenBtn.addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+        
+        // Auto-fullscreen on page load (may be blocked by browsers)
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.log("Auto-fullscreen failed, user can click button instead");
+            }
+        });
+
+        // Keep focus on input
+        document.addEventListener('click', function() {
+            terminalInput.focus();
+        });
+
+        // Initialize terminal on load
+        window.onload = initTerminal;
+    </script>
+</body>
+</html>
