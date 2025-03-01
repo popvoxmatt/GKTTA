@@ -29,6 +29,14 @@
             white-space: pre-wrap;
             margin-bottom: 10px;
             padding-bottom: 10px;
+            /* Hide scrollbar while keeping functionality */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        #terminal-output::-webkit-scrollbar {
+            display: none;
         }
 
         .input-area {
@@ -112,14 +120,35 @@
         .success {
             color: #00ffaa;
         }
+        
+        .machine-animation {
+            white-space: pre;
+            line-height: 1.2;
+            margin: 10px 0;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="terminal-output"></div>
+        <div id="terminal-output">
+  _____  _  _______ _______  _    
+ / ____|| |/ /_   _|__   __|| |   
+| |  __|| ' /  | |    | |   | |_  __ _ 
+| | |_ || &lt;    | |    | |   | __|/ _' |
+| |__| || . \ _| |_   | |   | |_| (_| |
+ \_____||_|\_\_____|  |_|    \__|\__,_|
+
+GOLDEN KEY TIME TRAVEL AGENCY
+SYSTEM TERMINAL - CLASSIFIED
+Welcome to the Golden Key Time Travel Agency Terminal v2.3.7
+AUTHORIZED PERSONNEL ONLY
+Type 'help' for available commands.
+
+</div>
         <div class="input-area">
             <div id="prompt">$</div>
-            <input type="text" id="terminal-input" autofocus spellcheck="false">
+            <input type="text" id="terminal-input" autofocus="" spellcheck="false">
         </div>
     </div>
     
@@ -147,6 +176,89 @@ SYSTEM TERMINAL - CLASSIFIED
 `
         };
 
+        // Machine animation states
+        const machineAnimations = [
+            // State 1: Initial
+            `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|            [STANDBY]             |
+|                                  |
+|      .---.             .---.     |
+|     /     \\           /     \\    |
+|    |       |         |       |   |
+|     \\     /           \\     /    |
+|      '---'             '---'     |
+|                                  |
++----------------------------------+
+`,
+            // State 2: Powering Up
+            `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|         [POWERING UP...]         |
+|       Progress: [=>      ]       |
+|                                  |
+|      .---.             .---.     |
+|     /     \\           /     \\    |
+|    |   *   |         |       |   |
+|     \\     /           \\     /    |
+|      '---'             '---'     |
+|                                  |
++----------------------------------+
+`,
+            // State 3: Initializing
+            `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|         [INITIALIZING...]        |
+|       Progress: [====>   ]       |
+|                                  |
+|      .---.             .---.     |
+|     /  *  \\           /  *  \\    |
+|    |   *   |         |   *   |   |
+|     \\  *  /           \\  *  /    |
+|      '---'             '---'     |
+|                                  |
++----------------------------------+
+`,
+            // State 4: Calibrating
+            `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|         [CALIBRATING...]         |
+|       Progress: [======> ]       |
+|                                  |
+|      .---.             .---.     |
+|     / *** \\           / *** \\    |
+|    |  ***  |         |  ***  |   |
+|     \\ *** /           \\ *** /    |
+|      '---'             '---'     |
+|                                  |
++----------------------------------+
+`,
+            // State 5: Ready
+            `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|        [READY FOR JUMP]          |
+|       Progress: [========]       |
+|                                  |
+|      .---.             .---.     |
+|     /*****\\           /*****\\    |
+|    |*******|         |*******|   |
+|     \\*****/           \\*****/    |
+|      '---'             '---'     |
+|                                  |
++----------------------------------+
+`
+        ];
+
         // DOM elements
         const terminalOutput = document.getElementById('terminal-output');
         const terminalInput = document.getElementById('terminal-input');
@@ -165,10 +277,12 @@ SYSTEM TERMINAL - CLASSIFIED
             fuelLevel: 86,
             systemIntegrity: 92,
             calibration: "uncalibrated",
-            timeCoilStatus: "stable"
+            timeCoilStatus: "stable",
+            animationState: 0
         };
         let isLoggedIn = false;
         let currentUser = "guest";
+        let animationInterval = null;
 
         // Initialize terminal
         function initTerminal() {
@@ -190,6 +304,37 @@ SYSTEM TERMINAL - CLASSIFIED
         // Clear terminal
         function clearTerminal() {
             terminalOutput.innerHTML = '';
+        }
+
+        // Display machine animation
+        function displayMachineAnimation(state) {
+            const animDiv = document.createElement('div');
+            animDiv.className = 'machine-animation';
+            animDiv.innerHTML = machineAnimations[state];
+            terminalOutput.appendChild(animDiv);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        // Start machine animation sequence
+        function startMachineAnimation() {
+            // Clear any existing animation interval
+            if (animationInterval) {
+                clearInterval(animationInterval);
+            }
+            
+            timeMachineStatus.animationState = 0;
+            displayMachineAnimation(timeMachineStatus.animationState);
+            
+            // Set up animation interval
+            animationInterval = setInterval(() => {
+                timeMachineStatus.animationState++;
+                if (timeMachineStatus.animationState < machineAnimations.length) {
+                    displayMachineAnimation(timeMachineStatus.animationState);
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            }, 1000);
         }
 
         // Command processing
@@ -402,7 +547,7 @@ IV. MAINTENANCE
 
 For complete documentation, view the full manual at your local terminal or access the PDF at our secure repository.
 
-Link to full PDF manual: <a href="https://popvoxmatt.github.io/GKTTA/time-machine-manual.pdf" target="_blank">Time Machine Manual</a>
+Link to full PDF manual: <a href="Download PDF" target="_blank">Time Machine Manual</a>
 `);
                     } else {
                         writeToTerminal('Error: Access denied. This file requires agent credentials.\n');
@@ -454,9 +599,18 @@ Power consumption: 1.21 gigawatts
 Core temperature: 37°C and stable
 Ready for calibration.
 `);
+                    // Start the machine animation sequence
+                    startMachineAnimation();
                 } else if (powerState === 'off') {
                     timeMachineStatus.power = false;
                     timeMachineStatus.calibration = "uncalibrated";
+                    // Clear animation interval if it exists
+                    if (animationInterval) {
+                        clearInterval(animationInterval);
+                        animationInterval = null;
+                    }
+                    // Display standby state
+                    displayMachineAnimation(0);
                     writeToTerminal(`
 <span class="warning">Time machine powering down...</span>
 Temporal field collapsing
@@ -472,8 +626,16 @@ System in standby mode
 Initiating calibration sequence...
 <span class="blink">Scanning temporal reference points...</span>
 `);
+                    // Skip to calibrating animation
+                    if (animationInterval) {
+                        clearInterval(animationInterval);
+                        animationInterval = null;
+                    }
+                    displayMachineAnimation(3); // Show calibrating state
+                    
                     setTimeout(() => {
                         timeMachineStatus.calibration = "calibrated";
+                        displayMachineAnimation(4); // Show ready state
                         writeToTerminal(`
 Calibration complete.
 Temporal accuracy: 99.7%
@@ -554,17 +716,79 @@ System integrity: ${timeMachineStatus.systemIntegrity}%
 <span class="blink">Generating temporal field...</span>
 `);
                 
-                setTimeout(() => {
-                    writeToTerminal(`
-<span class="blink">Quantum particles accelerating...</span>
-`);
-                }, 1500);
+                // Animation for time travel
+                const timeJumpAnimation = [
+                    `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|       [TEMPORAL FIELD GEN]       |
+|                                  |
+|      .---.             .---.     |
+|     /|||||\\           /|||||\\    |
+|    |||||||||         |||||||||   |
+|     \\|||||/           \\|||||/    |
+|      '---'             '---'     |
+|       ~~~~ CHARGING ~~~~~        |
++----------------------------------+
+`,
+                    `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|    [QUANTUM ACCELERATION]        |
+|                                  |
+|      .---.             .---.     |
+|     /|||||\\           /|||||\\    |
+|    |||||||||⚡        |||||||||⚡  |
+|     \\|||||/           \\|||||/    |
+|      '---'             '---'     |
+|      ~~~~~ ENERGIZING ~~~~~      |
++----------------------------------+
+`,
+                    `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|      [TIMELINE BREACH]           |
+|                                  |
+|      .---.  ⚡  ⚡  ⚡  .---.     |
+|     /|||||\\⚡  ⚡  ⚡ /|||||\\    |
+|    |||||||||⚡  ⚡  ⚡|||||||||   |
+|     \\|||||/⚡  ⚡  ⚡ \\|||||/    |
+|      '---'  ⚡  ⚡  ⚡  '---'     |
+|      ~~~~~ BREACHING ~~~~~       |
++----------------------------------+
+`,
+                    `
++----------------------------------+
+|        GKTTA TIME MACHINE        |
+|                                  |
+|        [JUMP IN PROGRESS]        |
+|                                  |
+|     ⚡.---. ⚡ ⚡ ⚡ .---.⚡     |
+|   ⚡ /|||||\\⚡  ⚡  ⚡/|||||\\⚡   |
+|  ⚡ |||||||||⚡  ⚡ ⚡|||||||||⚡  |
+|   ⚡ \\|||||/⚡  ⚡  ⚡\\|||||/⚡   |
+|     ⚡'---' ⚡ ⚡ ⚡ '---'⚡      |
+|      ~~ JUMPING TIMELINES ~~     |
++----------------------------------+
+`
+                ];
                 
-                setTimeout(() => {
-                    writeToTerminal(`
-<span class="blink">Timeline breach in progress...</span>
-`);
-                }, 3000);
+                let animIndex = 0;
+                const jumpInterval = setInterval(() => {
+                    if (animIndex < timeJumpAnimation.length) {
+                        const jumpDiv = document.createElement('div');
+                        jumpDiv.className = 'machine-animation';
+                        jumpDiv.innerHTML = timeJumpAnimation[animIndex];
+                        terminalOutput.appendChild(jumpDiv);
+                        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                        animIndex++;
+                    } else {
+                        clearInterval(jumpInterval);
+                    }
+                }, 1000);
                 
                 setTimeout(() => {
                     timeMachineStatus.fuelLevel -= Math.floor(Math.random() * 10) + 5;
@@ -579,6 +803,7 @@ Return window: 72 hours
 
 REMEMBER PROTOCOL OMEGA: Do not alter the timeline.
 `);
+                    displayMachineAnimation(4); // Show ready state
                 }, 5000);
             } else if (cmd === 'diagnostics' && isLoggedIn) {
                 writeToTerminal(`
@@ -645,106 +870,3 @@ Biological safety rating restored to 100%.
                 } else if (taskNumber === '2') {
                     writeToTerminal(`
 Recalibrating temporal coils...
-Alignment optimized.
-Efficiency improved by 7%.
-`);
-                    timeMachineStatus.timeCoilStatus = "stable";
-                    timeMachineStatus.systemIntegrity = Math.min(100, timeMachineStatus.systemIntegrity + 5);
-                } else if (taskNumber === '3') {
-                    writeToTerminal(`
-<span class="error">Error: This maintenance task requires physical components.</span>
-Please requisition new quantum stabilizers from inventory.
-`);
-                } else if (taskNumber === '4') {
-                    writeToTerminal(`
-Updating navigation database...
-Downloaded 37 new historical landmarks.
-Timeline accuracy improved to 99.9%.
-`);
-                } else if (taskNumber === '5') {
-                    writeToTerminal(`
-Running system optimization...
-Defragmenting memory banks...
-Optimizing power flow...
-Recalculating temporal equations...
-System performance improved by 3%.
-`);
-                } else {
-                    writeToTerminal(`<span class="error">Error: Invalid task number.</span>\n`);
-                }
-            } else if (cmd === 'manual') {
-                writeToTerminal(`Accessing Time Machine Manual...
-
-The full manual is available as a PDF: <a href="https://popvoxmatt.github.io/GKTTA/time-machine-manual.pdf" target="_blank">Time Machine Manual</a>
-
-Quick reference guide:
-1. Power on system using "power on" command
-2. Run diagnostics using "diagnostics" command
-3. Calibrate the time machine using "calibrate" command
-4. Set destination year using "set-destination YYYY" command
-5. Set coordinates using "set-coordinates X,Y" command
-6. Initiate time jump using "initiate" command
-
-Always follow Protocol Omega to preserve timeline integrity.
-`);
-            } else if (cmd === 'links') {
-                writeToTerminal(`Important Links:
-- <a href="https://popvoxmatt.github.io/GKTTA/" target="_blank">GKTTA Public Portal</a>
-- <a href="https://popvoxmatt.github.io/GKTTA/time-machine-manual.pdf" target="_blank">Time Machine Manual</a>
-- <a href="https://github.com/popvoxmatt/GKTTA" target="_blank">GitHub Repository</a>
-`);
-            } else {
-                writeToTerminal(`Command not found: ${command}
-Type "help" for available commands.\n`);
-            }
-        }
-        
-        // Display time machine status
-        function displayTimeMachineStatus() {
-            writeToTerminal(`
-<div class="time-machine-status">
-TIME MACHINE STATUS
-
-Power: ${timeMachineStatus.power ? '<span class="success">ONLINE</span>' : '<span class="error">OFFLINE</span>'}
-Destination Year: ${timeMachineStatus.destination || 'Not set'}
-Coordinates: ${timeMachineStatus.coordinates || 'Not set'}
-Fuel Level: ${timeMachineStatus.fuelLevel}%
-System Integrity: ${timeMachineStatus.systemIntegrity}%
-Calibration: ${timeMachineStatus.calibration === "calibrated" ? '<span class="success">CALIBRATED</span>' : '<span class="warning">UNCALIBRATED</span>'}
-Temporal Coil Status: ${timeMachineStatus.timeCoilStatus === "stable" ? '<span class="success">STABLE</span>' : '<span class="warning">DEGRADED</span>'}
-</div>
-`);
-        }
-
-        // Fullscreen functionality
-        fullscreenBtn.addEventListener('click', function() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
-                });
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-        });
-        
-        // Auto-fullscreen on page load (may be blocked by browsers)
-        document.addEventListener('DOMContentLoaded', function() {
-            try {
-                document.documentElement.requestFullscreen();
-            } catch (err) {
-                console.log("Auto-fullscreen failed, user can click button instead");
-            }
-        });
-
-        // Keep focus on input
-        document.addEventListener('click', function() {
-            terminalInput.focus();
-        });
-
-        // Initialize terminal on load
-        window.onload = initTerminal;
-    </script>
-</body>
-</html>
