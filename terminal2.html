@@ -92,28 +92,24 @@
     </div>
 
     <script>
-        // Terminal configuration
-        const config = {
-            promptSymbol: '$',
-            welcomeMessage: `Welcome to the GKTTA Terminal v1.0.0
-Type 'help' for available commands.
-
-`,
-            asciiArt: `
-
-   ___ _  _______ _____ _   
-  / __| |/ /_   _|_   _/_\  
+  // Terminal configuration
+const config = {
+    promptSymbol: '$',
+    welcomeMessage: `Welcome to the GKTTA Terminal v1.0.0
+Type 'help' for available commands.`,
+    asciiArt: `
+   ___ _  _ _____ _____  _   
+  / __| |/ /_   _|_   _|/ \  
  | (_ | ' <  | |   | |/ _ \ 
   \___|_|\_\ |_|   |_/_/ \_\
                             
+`
+};
 
-
-        };
-
-        // DOM elements
-        const terminalOutput = document.getElementById('terminal-output');
-        const terminalInput = document.getElementById('terminal-input');
-        const prompt = document.getElementById('prompt');
+// DOM elements
+const terminalOutput = document.getElementById('terminal-output');
+const terminalInput = document.getElementById('terminal-input');
+const prompt = document.getElementById('prompt');
 
         // Terminal state
         const commandHistory = [];
