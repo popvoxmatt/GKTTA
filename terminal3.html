@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Key Society Terminal</title>
+    <style>
+        html, body {
+            background-color: #0a0a1a; /* Slightly dark blue-ish black */
+            color: #ffd700; /* Gold color for text */
+            font-family: 'Consolas', 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #terminal-output {
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            line-height: 1.4; /* Slightly more spacing */
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        #prompt {
+            color: #ffd700; /* Gold */
+            margin-right: 8px;
+            font-weight: bold;
+        }
+
+        #terminal-input {
+            background: transparent;
+            border: none;
+            color: #ffd700; /* Gold */
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 16px;
+            outline: none;
+            flex-grow: 1;
+        }
+
+        a {
+            color: #ffa500; /* Orange for links */
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #ascii-art {
+            white-space: pre;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            color: #c0c0c0; /* Silver for ASCII art */
+        }
+
+        .blink {
+            animation: blink-animation 1s steps(2, start) infinite;
+        }
+
+        @keyframes blink-animation {
+            to {
+                visibility: hidden;
+            }
+        }
+
+        /* Glitch effect styles - Activated by adding 'portal-active' class to body */
+        .portal-active {
+            animation: screen-flicker 0.1s infinite alternate;
+        }
+
+        .portal-active #terminal-output::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 255, 0, 0.05); /* Faint green overlay */
+            pointer-events: none;
+            z-index: 10;
+            animation: scanlines 0.5s linear infinite;
+        }
+
+        .portal-active #terminal-output span.glitch {
+            position: relative;
+            display: inline-block;
+            animation: text-glitch 1.5s infinite alternate;
+        }
+
+        .portal-active #terminal-output span.glitch::before,
+        .portal-active #terminal-output span.glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a1a; /* Match body background */
+            overflow: hidden;
+        }
+
+        .portal-active #terminal-output span.glitch::before {
+            left: 2px;
+            text-shadow: -1px 0 red;
+            animation: glitch-anim-1 1s infinite linear alternate-reverse;
+        }
+
+        .portal-active #terminal-output span.glitch::after {
+            left: -2px;
+            text-shadow: -1px 0 blue;
+            animation: glitch-anim-2 1.5s infinite linear alternate-reverse;
+        }
+
+        @keyframes screen-flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.95; }
+            100% { opacity: 1; }
+        }
+
+         @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(20px); } /* Adjust speed/distance */
+        }
+
+        @keyframes text-glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-1px, 1px); }
+            40% { transform: translate(-1px, -1px); }
+            60% { transform: translate(1px, 1px); }
+            80% { transform: translate(1px, -1px); }
+            100% { transform: translate(0); }
+        }
+
+        @keyframes glitch-anim-1 {
+            0% { clip-path: inset(10% 0 80% 0); }
+            20% { clip-path: inset(50% 0 30% 0); }
+            40% { clip-path: inset(25% 0 65% 0); }
+            60% { clip-path: inset(80% 0 5% 0); }
+            80% { clip-path: inset(40% 0 45% 0); }
+            100% { clip-path: inset(70% 0 10% 0); }
+        }
+
+        @keyframes glitch-anim-2 {
+            0% { clip-path: inset(75% 0 15% 0); }
+            20% { clip-path: inset(10% 0 85% 0); }
+            40% { clip-path: inset(60% 0 30% 0); }
+            60% { clip-path: inset(35% 0 55% 0); }
+            80% { clip-path: inset(90% 0 2% 0); }
+            100% { clip-path: inset(45% 0 40% 0); }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="terminal-output"></div>
+        <div class="input-area">
+            <div id="prompt">GKS></div>
+            <input type="text" id="terminal-input" autofocus spellcheck="false">
+        </div>
+    </div>
+
+    <script>
+// Terminal configuration
+const config = {
+    promptSymbol: 'GKS>',
+    welcomeMessage: `Golden Key Society - Temporal Command Interface v3.1.4
+(c) 2384 Chronos Corp. All rights reserved.
+Unauthorized access is strictly monitored and prosecuted across all timelines.
+
+Type 'help' for available commands.
+System Status: STABLE | Anomaly Index: LOW`,
+    asciiArt: `
+        _.--""--._
+      .'          '.
+     /   O      O   \\
+    |    \  ^^  /    |
+    \     '----'     /
+     '. _______ .'
+    ___'_______'___
+   /   '-------'   \\_.-.
+  /________________\\ <> E)
+ /   / \\       / \\   \\( \\
+|   |____________|   | \\ \\
+|   (_)        (_)   |  \\ \\
+|                      |  /--\\
+\\        ____        /  /----\\
+ '._____/    \\_____.'  /     .\\
+   /            \\     /======'
+  /______________\\   /
+ /________________\\ /
+(__________________)
+`
+};
+
+// DOM elements
+const terminalOutput = document.getElementById('terminal-output');
+const terminalInput = document.getElementById('terminal-input');
+const prompt = document.getElementById('prompt');
+const bodyElement = document.body;
+
+// Terminal state
+const commandHistory = [];
+let historyIndex = -1;
+let isPasswordMode = false;
+let passwordCallback = null;
+let isAuthenticated = false; // Track login state
+let currentUser = 'Trainee'; // Default user
+let isPortalActive = false;
+let portalTarget = null; // Stores { type: 'time'/'dimension', location: 'string' }
+let currentMission = "Monitor sector 7G for temporal ripples. Report any deviations above 0.05 Chronons.";
+
+// Initialize terminal
+function initTerminal() {
+    writeToTerminal(config.asciiArt);
+    writeToTerminal(config.welcomeMessage + '\n');
+    terminalInput.focus();
+}
+
+// Write text to terminal
+function writeToTerminal(text, withPrompt = false) {
+    let outputText = text;
+    if (withPrompt) {
+        outputText = `<div><span class="prompt">${config.promptSymbol}</span> ${text}</div>`;
+    }
+
+    // If portal is active, apply glitch effect dynamically (basic version: wrap in span)
+    if (isPortalActive) {
+        // Simple way: wrap entire output line. More complex: randomly wrap words/chars.
+        // Let's wrap the text part for demonstration if not already HTML.
+        if (!text.startsWith('<div')) {
+           const words = text.split(' ');
+           outputText = words.map(word => `<span class="glitch" data-text="${word}">${word}</span>`).join(' ');
+           if (withPrompt) {
+               outputText = `<div><span class="prompt">${config.promptSymbol}</span> ${outputText}</div>`;
+           }
+        }
+    }
+
+    terminalOutput.innerHTML += outputText;
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+// Clear terminal
+function clearTerminal() {
+    terminalOutput.innerHTML = '';
+    // Re-print ASCII art if desired after clear
+    // writeToTerminal(config.asciiArt);
+}
+
+// Toggle Glitch Effects
+function setPortalEffect(active) {
+    if (active) {
+        bodyElement.classList.add('portal-active');
+        isPortalActive = true;
+    } else {
+        bodyElement.classList.remove('portal-active');
+        isPortalActive = false;
+        // Force redraw to remove glitch artifacts if any remain
+        terminalOutput.innerHTML = terminalOutput.innerHTML;
+    }
+}
+
+// Command processing
+terminalInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const input = terminalInput.value.trim();
+
+        if (isPasswordMode && passwordCallback) {
+            writeToTerminal('********\n', true); // Output stars instead of password
+            const pass = input;
+            isPasswordMode = false;
+            terminalInput.type = 'text';
+            passwordCallback(pass);
+        } else {
+            // Add to history and output
+            if (input !== '') {
+                commandHistory.push(input);
+                historyIndex = commandHistory.length;
+                writeToTerminal(input + '\n', true); // Output the command itself
+            } else {
+                 writeToTerminal('\n', true); // Output prompt even for empty command
+            }
+
+            // Process command
+            if (input !== '') {
+               processCommand(input);
+            }
+        }
+
+        // Clear input
+        terminalInput.value = '';
+        // Ensure prompt stays visible
+        prompt.textContent = config.promptSymbol;
+        // Scroll to bottom after processing
+        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+
+    } else if (e.key === 'ArrowUp') {
+        if (historyIndex > 0) {
+            historyIndex--;
+            terminalInput.value = commandHistory[historyIndex];
+        }
+        e.preventDefault();
+    } else if (e.key === 'ArrowDown') {
+        if (historyIndex < commandHistory.length - 1) {
+            historyIndex++;
+            terminalInput.value = commandHistory[historyIndex];
+        } else {
+            terminalInput.value = '';
+            historyIndex = commandHistory.length;
+        }
+        e.preventDefault();
+    } else if (e.key === 'Tab') {
+        // Basic autocomplete suggestion (example)
+        const currentInput = terminalInput.value.toLowerCase();
+        const commands = ['help', 'clear', 'status', 'date', 'whoami', 'login', 'logout', 'ls', 'cat', 'scan', 'locations', 'briefing', 'access_core', 'portal_activate', 'portal_target', 'portal_deactivate'];
+        const potentialMatch = commands.find(cmd => cmd.startsWith(currentInput));
+        if (potentialMatch) {
+            terminalInput.value = potentialMatch;
+        }
+        e.preventDefault();
+    }
+});
+
+// Password mode function
+function askPassword(callback) {
+    writeToTerminal('Enter Passphrase: '); // Use 'Passphrase' for theme
+    isPasswordMode = true;
+    terminalInput.type = 'password';
+    prompt.textContent = 'Passphrase:'; // Change prompt temporarily
+    passwordCallback = (pass) => {
+        // Restore prompt after callback finishes
+        prompt.textContent = config.promptSymbol;
+        callback(pass); // Call the original callback
+    };
+}
+
+// Process commands
+function processCommand(command) {
+    const parts = command.trim().split(/\s+/); // Split command into parts
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    if (cmd === '') return;
+
+    switch (cmd) {
+        case 'help':
+            writeToTerminal(`Available commands:
+  help          - Display this help message
+  clear         - Clear the terminal screen
+  status        - Show current system and portal status
+  date          - Display current Stardate and Local Time
+  whoami        - Display your current designation
+  login         - Authenticate for advanced functions
+  logout        - Log out from authenticated session
+  ls            - List files in the current directory
+  cat [file]    - Display file content
+  scan          - Scan local spacetime for anomalies
+  locations     - List known safe temporal/dimensional jump points
+  briefing      - Display current operational briefing
+  --------------------------------------------------
+  Advanced Commands (Requires Authentication):
+  access_core   - Initiate Core System Access (alias for login)
+  portal_target [type] [destination] - Set portal destination (e.g., time 1888-London, dimension Moonbeam-Hollow)
+  portal_activate - Activate the temporal/dimensional portal
+  portal_deactivate - Deactivate the portal safely
+`);
+            break;
+        case 'clear':
+            clearTerminal();
+            break;
+        case 'status':
+            const portalStatus = isPortalActive ? `ACTIVE - TARGET: ${portalTarget ? `${portalTarget.type.toUpperCase()} -> ${portalTarget.location}` : 'NONE SET'} <span class="glitch" data-text="[WARNING: HIGH ENERGY OUTPUT]"> [WARNING: HIGH ENERGY OUTPUT]</span>` : 'INACTIVE - STANDBY';
+            writeToTerminal(`System Status: STABLE
+Designation: ${currentUser}
+Authentication: ${isAuthenticated ? 'VALIDATED' : 'NONE'}
+Portal Status: ${portalStatus}
+Anomaly Index: LOW (0.02 Chronons)
+Last Maintenance: Stardate 98452.1
+`);
+            break;
+        case 'date':
+            const now = new Date();
+            // Fictional Stardate calculation
+            const yearStart = new Date(now.getFullYear(), 0, 1);
+            const dayOfYear = Math.floor((now - yearStart) / (1000 * 60 * 60 * 24));
+            const stardate = `${now.getFullYear() + 377}.${dayOfYear}`; // Simple example
+            writeToTerminal(`Current Stardate: ${stardate}
+Local HQ Time: ${now.toString()}\n`);
+            break;
+        case 'whoami':
+            writeToTerminal(`${currentUser}\n`);
+            break;
+        case 'login':
+        case 'access_core':
+            if (isAuthenticated) {
+                writeToTerminal("Already authenticated.\n");
+                break;
+            }
+            askPassword(function(password) {
+                // In a real escape room, the password would be hidden elsewhere
+                if (password === 'chronoskey23') { // The secret password
+                    isAuthenticated = true;
+                    currentUser = 'Operator'; // Elevate user level
+                    writeToTerminal('Authentication successful. Welcome, Operator. Core systems accessible.\n');
+                } else {
+                    writeToTerminal('Authentication failed. Incorrect passphrase.\n');
+                }
+            });
+            break;
+        case 'logout':
+            if (isAuthenticated) {
+                isAuthenticated = false;
+                currentUser = 'Trainee';
+                 if (isPortalActive) {
+                    writeToTerminal('WARNING: Logging out while portal is active is not recommended!\n');
+                    // Maybe force deactivation? For now, just warn.
+                 }
+                writeToTerminal('Session terminated. Logged out.\n');
+            } else {
+                writeToTerminal('Not currently logged in.\n');
+            }
+            break;
+        case 'ls':
+             writeToTerminal(`Directory listing for /gks/hq/terminal:
+  README.txt
+  protocols.txt
+  mission_log_archive.dat  [ENCRYPTED]
+  known_locations.cfg
+  anomaly_report_latest.log
+  temporal_mechanics_primer.pdf [PROTECTED]
+  core_systems/              [DIR - REQUIRES AUTH]
+`);
+            break;
+        case 'cat':
+            if (args.length === 0) {
+                writeToTerminal('Usage: cat [filename]\n');
+                break;
+            }
+            const file = args[0].toLowerCase();
+            switch (file) {
+                case 'readme.txt':
+                    writeToTerminal(`Golden Key Society - Operator Terminal README
+
+Welcome to the GKS Temporal Command Interface. This terminal provides access to essential Society resources and portal control functions.
+
+Use 'help' for a list of commands.
+Use 'login' or 'access_core' with the correct passphrase for advanced operations.
+
+Remember: Time is a tool, not a toy. Adhere strictly to all temporal protocols. Unauthorized jumps are grounds for immediate containment.
+
+"We hold the keys to eternity."
+`);
+                    break;
+                case 'protocols.txt':
+                    writeToTerminal(`GKS Standard Operating Protocols (Abridged):
+
+1.  Verify target coordinates and temporal stability index before initiating any jump.
+2.  Never interfere with fixed points in spacetime (See Appendix C: Paradox Avoidance).
+3.  Log all portal activations and mission outcomes. Failure to log is a Level 3 offense.
+4.  Dimensional travel requires additional stabilization checks. Consult 'known_locations.cfg'.
+5.  Report any unexpected temporal anomalies or paradox readings immediately via 'scan' and internal comms.
+6.  Core system access is restricted to Level 2 Operators and above. Passphrase security is paramount.
+7.  In case of temporal displacement emergency, engage failsafe protocol 'Chronos Lock'. (Requires physical key insertion)
+`);
+                    break;
+                case 'mission_log_archive.dat':
+                     writeToTerminal('Error: Access denied. File is encrypted. Requires Level 4 clearance.\n');
+                    break;
+                case 'known_locations.cfg':
+                    writeToTerminal(`Known Safe Jump Points (Temporal & Dimensional):
+
+Type: time     Destination: 1888-London      Stability: 0.98   Notes: Avoid Whitechapel after dark. High surveillance.
+Type: time     Destination: 2077-NeoKyoto    Stability: 0.95   Notes: Cybernetic interference possible. Use caution.
+Type: time     Destination: 1450-Florence    Stability: 0.99   Notes: Renaissance Faire observer status recommended.
+Type: dimension Destination: Aethelgard      Stability: 0.85   Notes: High magic field. Tech unreliable. Low gravity.
+Type: dimension Destination: Xylos_Nebula    Stability: 0.92   Notes: Sentient gas clouds. Non-corporeal interaction required.
+Type: dimension Destination: Moonbeam-Hollow Stability: 0.99   Notes: Tranquil. Minimal temporal drag. Ideal observation post. Designated Neutral Zone.
+Type: time     Destination: 65M-BC-Cretaceous Stability: 0.75   Notes: [DANGER] Extreme biological hazards. Authorization required.
+
+Use 'portal_target [type] [destination]' to select. Example: 'portal_target dimension Moonbeam-Hollow'
+`);
+                    break;
+                case 'anomaly_report_latest.log':
+                    writeToTerminal(`Anomaly Report - Stardate 98451.5
+
+Source: Sector 7G Monitoring Array
+Type: Minor Temporal Ripple
+Magnitude: 0.04 Chronons
+Duration: 15.3 seconds
+Pattern: Echoes consistent with Class-2 chroniton displacement.
+Analysis: Probable residual effect from Event Horizon incident Delta-9. No immediate threat detected. Continued monitoring advised.
+
+--- END REPORT ---
+`);
+                    break;
+                 case 'temporal_mechanics_primer.pdf':
+                     writeToTerminal('Access Denied: File protection level requires authenticated session.\n');
+                    // Add content here if authenticated:
+                    // if (isAuthenticated) { writeToTerminal(... content ...); }
+                    break;
+                default:
+                    writeToTerminal(`cat: ${file}: No such file or directory\n`);
+            }
+            break;
+        case 'scan':
+             writeToTerminal(`Initiating local spacetime scan...
+.......
+Scan complete.
+Results:
+  - Temporal Stability: HIGH (0.998)
+  - Paradox Index: MINIMAL (0.001)
+  - Localized Anomalies: 1 (Type: Residual Chroniton Field, Magnitude: 0.01 Chronons, Location: Sub-level 3 - Containment Bay)
+  - Dimensional Stress: NEGLIGIBLE
+
+Recommendation: No immediate action required. Monitor containment bay readings.\n`);
+            break;
+        case 'locations':
+            // Alias for cat known_locations.cfg
+            processCommand('cat known_locations.cfg');
+            break;
+        case 'briefing':
+             writeToTerminal(`Current Operational Briefing:
+Designation: ${currentUser}
+Mission: ${currentMission}
+Threat Level: Green
+Objectives:
+  1. Maintain vigilance over assigned sector monitoring equipment.
+  2. Report any status changes or anomalies exceeding 0.05 Chronons immediately.
+  3. Await further instructions from Command. Do not initiate unauthorized portal jumps.
+
+End Briefing.\n`);
+            break;
+
+        // --- Authenticated Commands ---
+        case 'portal_target':
+            if (!isAuthenticated) {
+                writeToTerminal('Error: Authentication required for portal operations.\n');
+                break;
+            }
+            if (args.length < 2) {
+                writeToTerminal('Usage: portal_target [type] [destination]\nExample: portal_target time 1888-London\nExample: portal_target dimension Moonbeam-Hollow\n');
+                break;
+            }
+            const type = args[0].toLowerCase();
+            const destination = args.slice(1).join('-'); // Join remaining args for multi-word destinations
+
+            if (type !== 'time' && type !== 'dimension') {
+                writeToTerminal(`Error: Invalid portal type '${type}'. Use 'time' or 'dimension'.\n`);
+                break;
+            }
+
+            // Optional: Validate against known_locations.cfg? For simplicity, allow any target.
+            portalTarget = { type: type, location: destination };
+            writeToTerminal(`Portal target set.
+Type: ${portalTarget.type.toUpperCase()}
+Destination: ${portalTarget.location}
+Awaiting activation command.\n`);
+            break;
+
+        case 'portal_activate':
+            if (!isAuthenticated) {
+                writeToTerminal('Error: Authentication required for portal operations.\n');
+                break;
+            }
+            if (isPortalActive) {
+                writeToTerminal('Portal is already active.\n');
+                break;
+            }
+            if (!portalTarget) {
+                writeToTerminal('Error: No portal target set. Use \'portal_target\' first.\n');
+                break;
+            }
+
+            writeToTerminal(`Authenticating operator credentials... Verified.
+Initiating portal sequence for ${portalTarget.type.toUpperCase()} jump to ${portalTarget.location}...
+Powering Chroniton Emitters... OK
+Stabilizing Event Horizon... <span class="glitch" data-text="OK">OK</span>
+Engaging Dimensional Harmonizers... <span class="glitch" data-text="ACTIVE">ACTIVE</span>
+WARNING: High energy levels detected! Maintain safe distance!
+...
+<span class="glitch" data-text="PORTAL OPEN">PORTAL OPEN</span>. Window stable. Target lock confirmed.
+`);
+            setPortalEffect(true); // Activate glitch effects
+            break;
+
+        case 'portal_deactivate':
+             if (!isAuthenticated) {
+                writeToTerminal('Error: Authentication required for portal operations.\n');
+                break;
+            }
+            if (!isPortalActive) {
+                writeToTerminal('Portal is not currently active.\n');
+                break;
+            }
+
+            writeToTerminal(`Initiating portal shutdown sequence...
+Collapsing Event Horizon... <span class="glitch" data-text="In Progress">In Progress</span>... Done.
+Disengaging Harmonizers... OK.
+Venting residual Chronitons... OK.
+Energy levels returning to nominal.
+...
+PORTAL CLOSED. System returning to standby.
+`);
+            setPortalEffect(false); // Deactivate glitch effects
+            portalTarget = null; // Clear target after closing
+            break;
+
+        default:
+            writeToTerminal(`Command not found: ${command}
+Type "help" for available commands.\n`);
+            break;
+    }
+}
+
+// Keep focus on input
+document.addEventListener('click', function(event) {
+    // Prevent refocusing if clicking on a link
+    if (event.target.tagName !== 'A') {
+       terminalInput.focus();
+    }
+});
+
+// Initialize terminal on load
+window.onload = initTerminal;
+
+    </script>
+</body>
+</html>
