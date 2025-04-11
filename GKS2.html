@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Key Society Terminal</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/space-mono@4.5.0/index.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0a0a1a;
+            --text-color: #ffd700;
+            --ascii-color: #c0c0c0;
+            --link-color: #ffa500;
+            --error-color: #ff4545;
+            --success-color: #45ff45;
+            --warning-color: #ffff45;
+            --inactive-color: #777;
+            --scanline-color: rgba(0, 0, 0, 0.1);
+            --glow-color: rgba(255, 215, 0, 0.3);
+            --crystal-color: #a0ffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: black;
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        #terminal-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        #terminal {
+            height: 100%;
+            width: 100%;
+            overflow-y: auto;
+            position: relative;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        #terminal::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        #input-line {
+            display: flex;
+            color: var(--text-color);
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 1rem;
+            margin-top: 10px;
+            position: sticky;
+            bottom: 0;
+            background-color: var(--bg-color);
+        }
+
+        #prompt {
+            margin-right: 8px;
+        }
+
+        #input {
+            background: transparent;
+            border: none;
+            outline: none;
+            caret-color: var(--text-color);
+            color: var(--text-color);
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 1rem;
+            flex-grow: 1;
+        }
+
+        .output-line {
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .ascii-art {
+            color: var(--ascii-color);
+            white-space: pre;
+            font-family: monospace;
+            line-height: 1.2;
+            margin: 20px 0;
+            font-size: 0.8rem;
+        }
+
+        .error {
+            color: var(--error-color);
+        }
+
+        .success {
+            color: var(--success-color);
+        }
+
+        .warning {
+            color: var(--warning-color);
+        }
+
+        .crystal {
+            color: var(--crystal-color);
+            text-shadow: 0 0 5px var(--crystal-color);
+        }
+
+        .link {
+            color: var(--link-color);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* CRT Effects */
+        .crt::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .crt::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(0, 0, 0, 0) 0%,
+                rgba(0, 0, 0, 0.2) 90%,
+                rgba(0, 0, 0, 0.4) 100%
+            );
+            pointer-events: none;
+            z-index: 9;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                var(--scanline-color) 51%,
+                transparent 51%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 8;
+            opacity: 0.3;
+        }
+
+        .glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 100px var(--glow-color);
+            pointer-events: none;
+            z-index: 7;
+        }
+
+        /* Flickering effect */
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 0.9; }
+            10% { opacity: 0.97; }
+            15% { opacity: 0.92; }
+            20% { opacity: 0.97; }
+            25% { opacity: 0.93; }
+            30% { opacity: 0.97; }
+            35% { opacity: 0.9; }
+            40% { opacity: 0.97; }
+            45% { opacity: 0.94; }
+            50% { opacity: 0.98; }
+            55% { opacity: 0.91; }
+            60% { opacity: 0.97; }
+            65% { opacity: 0.92; }
+            70% { opacity: 0.97; }
+            75% { opacity: 0.93; }
+            80% { opacity: 0.97; }
+            85% { opacity: 0.9; }
+            90% { opacity: 0.97; }
+            95% { opacity: 0.96; }
+            100% { opacity: 0.97; }
+        }
+
+        .flicker {
+            animation: flicker 4s infinite;
+        }
+
+        /* Portal active effects - ENHANCED */
+        .portal-active #terminal-container {
+            animation: portal-background 3s ease infinite;
+        }
+
+        @keyframes portal-background {
+            0% { background-color: var(--bg-color); }
+            33% { background-color: #0f1a3a; }
+            66% { background-color: #1a0f3a; }
+            100% { background-color: var(--bg-color); }
+        }
+
+        .portal-active .output-line {
+            position: relative;
+        }
+
+        .portal-active .output-line.glitch {
+            animation: glitch-text 0.4s ease;
+        }
+
+        @keyframes glitch-text {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 1px); color: #a0ffff; }
+            40% { transform: translate(2px, -1px); color: var(--text-color); }
+            60% { transform: translate(-1px, -1px); color: #ff9900; }
+            80% { transform: translate(1px, 1px); color: var(--text-color); }
+            100% { transform: translate(0); }
+        }
+
+        .portal-active .heavy-glitch {
+            animation: heavy-glitch 0.2s ease infinite;
+        }
+
+        @keyframes heavy-glitch {
+            0% { transform: translate(0); opacity: 1; }
+            10% { transform: translate(-5px, 2px); opacity: 0.8; }
+            20% { transform: translate(5px, -2px); opacity: 0.9; }
+            30% { transform: translate(-3px, -3px); opacity: 0.7; }
+            40% { transform: translate(3px, 3px); opacity: 0.9; }
+            50% { transform: translate(-2px, -1px); opacity: 0.8; }
+            60% { transform: translate(2px, 1px); opacity: 1; }
+            70% { transform: translate(-1px, 2px); opacity: 0.9; }
+            80% { transform: translate(1px, -2px); opacity: 0.8; }
+            90% { transform: translate(-2px, 1px); opacity: 0.9; }
+            100% { transform: translate(0); opacity: 1; }
+        }
+
+        /* Crystal glow effect */
+        .crystal-glow {
+            animation: crystal-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes crystal-pulse {
+            0% { text-shadow: 0 0 4px var(--crystal-color); }
+            50% { text-shadow: 0 0 12px var(--crystal-color), 0 0 20px var(--crystal-color); }
+            100% { text-shadow: 0 0 4px var(--crystal-color); }
+        }
+
+        /* VHS tracking effect */
+        .portal-active .tracking-glitch {
+            animation: tracking 0.3s linear;
+            animation-iteration-count: 1;
+        }
+
+        @keyframes tracking {
+            0% { transform: translateY(0); }
+            20% { transform: translateY(-10px); }
+            35% { transform: translateY(5px); }
+            50% { transform: translateY(-2px); }
+            65% { transform: translateY(0); }
+            85% { transform: translateY(-1px); }
+            100% { transform: translateY(0); }
+        }
+
+        /* Digital distortion */
+        .portal-active .digital-corruption {
+            position: relative;
+            display: inline-block;
+        }
+
+        .portal-active .digital-corruption::before {
+            content: attr(data-text);
+            position: absolute;
+            left: 2px;
+            text-shadow: -1px 0 #00ffff;
+            top: 0;
+            overflow: hidden;
+            clip: rect(0, 900px, 0, 0);
+            animation: glitch-corruption 2s linear alternate-reverse;
+        }
+
+        .portal-active .digital-corruption::after {
+            content: attr(data-text);
+            position: absolute;
+            left: -2px;
+            text-shadow: 1px 0 #ff00ff;
+            top: 0;
+            overflow: hidden;
+            clip: rect(0, 900px, 0, 0);
+            animation: glitch-corruption 3s linear alternate-reverse;
+        }
+
+        @keyframes glitch-corruption {
+            0% { clip: rect(42px, 9999px, 44px, 0); }
+            5% { clip: rect(12px, 9999px, 59px, 0); }
+            10% { clip: rect(48px, 9999px, 29px, 0); }
+            15% { clip: rect(42px, 9999px, 73px, 0); }
+            20% { clip: rect(63px, 9999px, 27px, 0); }
+            25% { clip: rect(34px, 9999px, 55px, 0); }
+            30% { clip: rect(86px, 9999px, 73px, 0); }
+            35% { clip: rect(20px, 9999px, 20px, 0); }
+            40% { clip: rect(26px, 9999px, 60px, 0); }
+            45% { clip: rect(25px, 9999px, 66px, 0); }
+            50% { clip: rect(57px, 9999px, 98px, 0); }
+            55% { clip: rect(5px, 9999px, 46px, 0); }
+            60% { clip: rect(82px, 9999px, 31px, 0); }
+            65% { clip: rect(54px, 9999px, 27px, 0); }
+            70% { clip: rect(28px, 9999px, 99px, 0); }
+            75% { clip: rect(45px, 9999px, 59px, 0); }
+            80% { clip: rect(23px, 9999px, 67px, 0); }
+            85% { clip: rect(54px, 9999px, 84px, 0); }
+            90% { clip: rect(45px, 9999px, 47px, 0); }
+            95% { clip: rect(37px, 9999px, 20px, 0); }
+            100% { clip: rect(4px, 9999px, 91px, 0); }
+        }
+
+        /* Full screen button */
+        #fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--inactive-color);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            z-index: 20;
+            transition: color 0.3s;
+            font-size: 1.2rem;
+        }
+
+        #fullscreen-btn:hover {
+            color: var(--text-color);
+        }
+
+        /* Password input field */
+        .password-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-color);
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 1rem;
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-color);
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Power button effect */
+        .power-btn {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #333;
+            border-radius: 50%;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .power-btn.on {
+            background-color: var(--success-color);
+            box-shadow: 0 0 5px var(--success-color);
+        }
+
+        .power-btn.off {
+            background-color: var(--error-color);
+            box-shadow: 0 0 5px var(--error-color);
+        }
+
+        .power-btn.standby {
+            background-color: var(--warning-color);
+            box-shadow: 0 0 5px var(--warning-color);
+        }
+
+        /* Command suggestions */
+        #suggestions {
+            margin-top: 5px;
+            color: var(--inactive-color);
+            font-size: 0.9rem;
+            position: sticky;
+            bottom: 0;
+            background-color: var(--bg-color);
+        }
+
+        #suggestion-text {
+            cursor: pointer;
+        }
+
+        #suggestion-text:hover {
+            color: var(--text-color);
+        }
+
+        /* Cursor animation */
+        @keyframes blink-cursor {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 0.6em;
+            height: 1em;
+            background-color: var(--text-color);
+            animation: blink-cursor 1s infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        /* Boot sequence */
+        .boot-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+        }
+
+        .boot-progress {
+            width: 60%;
+            height: 10px;
+            background-color: #222;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .boot-bar {
+            position: absolute;
+            height: 100%;
+            background-color: var(--text-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .boot-text {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* Crystal overlay effect */
+        .crystal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, transparent 90%, var(--crystal-color) 150%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 3s;
+            z-index: 15;
+        }
+
+        .portal-active .crystal-overlay {
+            opacity: 0.12;
+        }
+    </style>
+</head>
+<body>
+    <div id="boot-sequence" class="boot-animation">
+        <div class="boot-text" style="font-size: 20px; margin-bottom: 30px;">Initializing Golden Key Society Terminal</div>
+        <div class="boot-progress">
+            <div id="boot-bar" class="boot-bar"></div>
+        </div>
+        <div id="boot-text" class="boot-text">Loading system components...</div>
+    </div>
+
+    <div id="terminal-container" class="crt">
+        <div class="scanlines"></div>
+        <div class="glow"></div>
+        <div class="crystal-overlay"></div>
+        <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
+        <div id="terminal" class="flicker">
+            <!-- Terminal output will be displayed here -->
+        </div>
+        <div id="input-line">
+            <span id="prompt">GKS></span>
+            <input type="text" id="input" autofocus spellcheck="false">
+        </div>
+        <div id="suggestions">
+            <span id="suggestion-text"></span>
+        </div>
+    </div>
+
+    <audio id="keySound" src="https://cdn.jsdelivr.net/gh/zap-zsh/sounds@master/mechanical-keyboard.mp3" preload="auto"></audio>
+    <audio id="portalSound" src="https://cdn.jsdelivr.net/gh/stebsnusch/audio-bucket@main/portal-hum.mp3" preload="auto" loop></audio>
+    <audio id="errorSound" src="https://cdn.jsdelivr.net/gh/stebsnusch/audio-bucket@main/error-beep.mp3" preload="auto"></audio>
+    <audio id="successSound" src="https://cdn.jsdelivr.net/gh/stebsnusch/audio-bucket@main/success-chime.mp3" preload="auto"></audio>
+    <audio id="crystalSound" src="https://cdn.jsdelivr.net/gh/stebsnusch/audio-bucket@main/crystal-ping.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Boot sequence
+            const bootBar = document.getElementById('boot-bar');
+            const bootText = document.getElementById('boot-text');
+            const bootSequence = document.getElementById('boot-sequence');
+            
+            const bootMessages = [
+                "Initializing system...",
+                "Loading GKS Core v3.7.2...",
+                "Establishing quantum link...",
+                "Calibrating temporal stabilizers...",
+                "Scanning for anomalies...",
+                "Initializing portal protocols...",
+                "Verifying security parameters...",
+                "Checking crystal resonance patterns...",
+                "Loading dimensional coordinates...",
+                "Golden Key Society Terminal ready."
+            ];
+            
+            let bootProgress = 0;
+            const bootInterval = setInterval(() => {
+                bootProgress += 10;
+                bootBar.style.width = `${bootProgress}%`;
+                bootText.textContent = bootMessages[bootProgress / 10 - 1];
+                
+                if (bootProgress >= 100) {
+                    clearInterval(bootInterval);
+                    setTimeout(() => {
+                        bootSequence.style.display = 'none';
+                        init();
+                    }, 1000);
+                }
+            }, 600);
+
+            // Initialize terminal
+            function init() {
+                const terminal = document.getElementById('terminal');
+                const input = document.getElementById('input');
+                const promptSpan = document.getElementById('prompt');
+                const suggestions = document.getElementById('suggestion-text');
+                const fullscreenBtn = document.getElementById('fullscreen-btn');
+                
+                // Sound effects
+                const keySound = document.getElementById('keySound');
+                const portalSound = document.getElementById('portalSound');
+                const errorSound = document.getElementById('errorSound');
+                const successSound = document.getElementById('successSound');
+                const crystalSound = document.getElementById('crystalSound');
+
+                // Variables
+                let commandHistory = [];
+                let historyIndex = -1;
+                let isAuthenticated = false;
+                let currentUser = 'Trainee';
+                let isPortalActive = false;
+                let portalTarget = null;
+                let temporalAnomaly = Math.random() * 100;
+                let secretCommandsFound = 0;
+                let totalSecretCommands = 7;
+                let currentDirectory = '/';
+                
+                // File system structure - enhanced with new lore
+                let fileSystem = {
+                    'protocols': {
+                        'portal_operation.txt': 'CLASSIFIED: Portal Operation Protocol\n\n1. Authorization required (Level 3+)\n2. Set destination coordinates\n3. Verify temporal integrity\n4. Activate portal\n5. Monitor quantum stability\n6. DO NOT leave portal active for >30 minutes\n7. Deactivate and log all jumps',
+                        'emergency.txt': 'EMERGENCY PROCEDURES:\n\nIn case of temporal collapse:\n1. Deactivate portal IMMEDIATELY\n2. Contact Temporal Control (x7734)\n3. Initiate Protocol Zeta-9\n4. If Zeta-9 fails, use override code: TIMEFALL-OMEGA',
+                        'clearance_levels.txt': 'GKS CLEARANCE LEVELS:\n\nLevel 1: Trainee - Basic system access\nLevel 2: Agent - Field operations\nLevel 3: Operator - Portal activation\nLevel 4: Controller - Dimensional navigation\nLevel 5: Director - Full system access',
+                        'dimensional_theory.pdf': '[ENCRYPTED FILE] - Requires Level 4 clearance',
+                        'crystal_handling.txt': 'CRYSTAL HANDLING PROCEDURES:\n\nMoonbeam Crystals are HIGHLY SENSITIVE to electromagnetic fields!\n\n1. Always use insulated equipment when handling\n2. Store in lead-lined containers when not in use\n3. Keep minimum distance of 3 meters from active portal apparatus\n4. If crystal begins to pulse with light, EVACUATE IMMEDIATELY\n5. Report any unusual resonance patterns to Crystal Research Team'
+                    },
+                    'logs': {
+                        'jump_log_1970.txt': 'JUMP LOG 1970:\n\nJAN 12 - London 1895 - Agent Miller - Successful\nMAR 04 - Paris 1789 - Agent Thompson - Successful\nJUN 18 - Moonbeam Hollow - Agent Davis - ANOMALY DETECTED\nSEP 23 - Vienna 1809 - Agent Wilson - Successful\nDEC 10 - New York 1929 - Agent Moore - Temporal shift detected',
+                        'incident_report_42.txt': 'INCIDENT REPORT #42:\n\nDate: June 19, 1970\nLocation: Moonbeam Hollow\nAgent: Davis, J.\n\nDuring routine exploration of dimensional variant, agent reported temporal echo effect. Objects appeared to "remember" being moved. Local resident at coordinates MBH-334 (identified as "Hollow Keeper") displayed awareness of our operations. Recommend avoiding this sector until further notice.',
+                        'maintenance_log.txt': 'MAINTENANCE LOG:\n\nMAY 15, 1970 - Quantum stabilizer replaced\nJUL 03, 1970 - Temporal calibration performed\nAUG 28, 1970 - Portal core cooling system upgraded\nOCT 11, 1970 - Dimensional anchor points recalibrated\nNOV 30, 1970 - Emergency shutdown system tested - SUCCESSFUL',
+                        'agent_status.dat': '[ENCRYPTED FILE] - Requires Level 3 clearance',
+                        'crystal_acquisition.txt': 'CRYSTAL ACQUISITION LOG:\n\nFEB 14, 1970 - Expedition to Moonbeam Hollow. 3.2 kg of raw time crystals extracted\nAPR 22, 1970 - Treaty signed with Hollow Keepers for regulated crystal mining\nJUL 17, 1970 - First refined crystal batch (0.8 kg) delivered to Research\nOCT 05, 1970 - Mining operation expanded to northern caverns\nDEC 24, 1970 - Annual quota fulfilled (12 kg). Mining paused until Jan 15'
+                    },
+                    'locations': {
+                        'moonbeam_manor.txt': 'LOCATION FILE: MOONBEAM MANOR\n\nCoordinates: HOME DIMENSION\nTemporal Access: Unrestricted\nStatus: GKS HEADQUARTERS\nNotes: Primary operations base established 1952. Temporal shielding active. Safe return point for all operations.\n\nFounding: Selected as GKS HQ due to natural dimensional weak point located beneath the east wing. Portal anomaly first detected in 1932 by Dr. Eleanor Wright during geomagnetic studies.\n\nStructure: Victorian architecture with significant modifications for temporal research facilities. Sublevels 1-4 house portal apparatus and crystal refinement facilities.',
+                        'moonbeam_hollow.txt': 'LOCATION FILE: MOONBEAM HOLLOW\n\nCoordinates: DIM-MBH-1\nTemporal Access: RESTRICTED (Auth. Level 3+)\nStatus: UNDER OBSERVATION\nNotes: Dimensional variant of Moonbeam Manor location. Exhibits temporal anomalies. Time flows differently.\n\nInhabitants: Primary contact - "The Hollow Keeper" (appears humanoid, extreme longevity). Secondary population consists of crystalline-based entities with limited sentience.\n\nResources: Contains large deposits of temporal crystals essential to GKS operations. Mining operations established under treaty agreements with Hollow Keeper.\n\nWARNING: Unauthorized crystal harvesting strictly prohibited.',
+                        'london_1888.txt': 'LOCATION FILE: LONDON 1888\n\nCoordinates: TL-18881025\nTemporal Access: Authorized\nStatus: OBSERVATION ONLY\nNotes: Victorian era. High fog levels provide good cover. Avoid Scotland Yard. Known historical figures active in area. Paradox risk: MODERATE.',
+                        'restricted_zones.dat': '[ENCRYPTED FILE] - Requires Level 5 clearance',
+                        'crystal_caverns.txt': 'LOCATION FILE: CRYSTAL CAVERNS\n\nCoordinates: DIM-MBH-1, SUB-SECTOR 7\nAccess: RESTRICTED (Auth. Level 4+)\nStatus: ACTIVE MINING\n\nDescription: Vast network of underground caverns beneath Moonbeam Hollow. Largest known deposit of temporal crystals in any dimension. Crystals grow in geometrically perfect formations, with larger specimens exhibiting spontaneous temporal displacement properties.\n\nPrecautions: Full chronometric shielding required for all personnel. Limited exposure time (max 3 hours).\n\nNotes: Crystal growth accelerates during dimensional convergence events. Current primary source for GKS time travel technology.'
+                    },
+                    'training': {
+                        'welcome.txt': 'WELCOME TO THE GOLDEN KEY SOCIETY\n\nYou have been selected due to your exceptional abilities and discretion. Our organization monitors and maintains the integrity of the temporal and dimensional continuum.\n\nYour training will commence with basic system operations before advancing to field agent protocols. Remember our primary directive: Observe, don\'t interfere.\n\nThe consequences of temporal paradoxes cannot be overstated.',
+                        'commands.txt': 'BASIC TERMINAL COMMANDS:\n\nhelp - Display available commands\nstatus - System status report\ndir - List files in directory (synonyms: ls)\ntype - View file contents (synonyms: cat)\ncd [directory] - Change directory\ncd .. - Move up one directory level\ncd \\ - Return to root directory\nclear - Clear terminal screen\ndate - Display current date/time\nwhoami - Display current user\nlocations - View available jump points',
+                        'navigation.txt': 'FILE SYSTEM NAVIGATION:\n\nThe GKS terminal uses a hierarchical file system similar to DOS.\n\n- To see files in current directory: dir\n- To change directory: cd [directory_name]\n- To go up one level: cd ..\n- To return to root: cd \\\n- To view file contents: type [filename]\n\nDirectories are marked with <DIR> when viewing directory contents.',
+                        'portal_basics.txt': 'PORTAL OPERATION BASICS:\n\n1. Authentication required (login with approved credentials)\n2. Target selection (portal_target [type] [destination])\n3. Portal activation (portal_activate)\n4. Monitoring (continuous status checks)\n5. Deactivation (portal_deactivate)\n\nNEVER leave portal active when unattended!\nDO NOT attempt transit without proper authorization!',
+                        'crystal_theory.txt': 'TEMPORAL CRYSTAL THEORY (BASIC):\n\nMoonbeam Crystals (officially designated Chronosite-A) exhibit unique quantum properties that allow manipulation of spacetime. When properly energized, these crystals create stable Einstein-Rosen bridges between dimensions or time periods.\n\nThe crystals appear naturally only in Moonbeam Hollow, suggesting the area exists at a dimensional nexus point. Crystal formation requires approximately 237 years under specific conditions of pressure and temporal flux.\n\nCrystal potency is measured on the Wright Scale (0-10). GKS portal operations require minimum Wright rating of 8.5.'
+                    }
+                };
+
+                // Welcome message
+                output(`
+  ▄████  ▒█████   ██▓    ▓█████▄ ▓█████  ███▄    █      ██ ▄█▀▓█████▓██   ██▓
+ ██▒ ▀█▒▒██▒  ██▒▓██▒    ▒██▀ ██▌▓█   ▀  ██ ▀█   █      ██▄█▒ ▓█   ▀ ▒██  ██▒
+▒██░▄▄▄░▒██░  ██▒▒██░    ░██   █▌▒███   ▓██  ▀█ ██▒    ▓███▄░ ▒███    ▒██ ██░
+░▓█  ██▓▒██   ██░▒██░    ░▓█▄   ▌▒▓█  ▄ ▓██▒  ▐▌██▒    ▓██ █▄ ▒▓█  ▄  ░ ▐██▓░
+░▒▓███▀▒░ ████▓▒░░██████▒░▒████▓ ░▒████▒▒██░   ▓██░    ▒██▒ █▄░▒████▒ ░ ██▒▓░
+ ░▒   ▒ ░ ▒░▒░▒░ ░ ▒░▓  ░ ▒▒▓  ▒ ░░ ▒░ ░░ ▒░   ▒ ▒     ▒ ▒▒ ▓▒░░ ▒░ ░  ██▒▒▒ 
+  ░   ░   ░ ▒ ▒░ ░ ░ ▒  ░ ░ ▒  ▒  ░ ░  ░░ ░░   ░ ▒░    ░ ░▒ ▒░ ░ ░  ░▓██ ░▒░ 
+░ ░   ░ ░ ░ ░ ▒    ░ ░    ░ ░  ░    ░      ░   ░ ░     ░ ░░ ░    ░   ▒ ▒ ░░  
+      ░     ░ ░      ░  ░   ░       ░  ░         ░     ░  ░      ░  ░░ ░     
+                          ░                                           ░ ░     
+▒█████   ▄████▄   ██▓▓█████▄▄▄█████▓▓██   ██▓
+▒██▒  ██▒▒██▀ ▀█  ▓██▒▓█   ▀▓  ██▒ ▓▒ ▒██  ██▒
+▒██░  ██▒▒▓█    ▄ ▒██▒▒███  ▒ ▓██░ ▒░  ▒██ ██░
+▒██   ██░▒▓▓▄ ▄██▒░██░▒▓█  ▄░ ▓██▓ ░   ░ ▐██▓░
+░ ████▓▒░▒ ▓███▀ ░░██░░▒████▒ ▒██▒ ░   ░ ██▒▓░
+░ ▒░▒░▒░ ░ ░▒ ▒  ░░▓  ░░ ▒░ ░ ▒ ░░      ██▒▒▒ 
+  ░ ▒ ▒░   ░  ▒    ▒ ░ ░ ░  ░   ░      ▓██ ░▒░ 
+░ ░ ░ ▒  ░         ▒ ░   ░    ░        ▒ ▒ ░░  
+    ░ ░  ░ ░       ░     ░  ░          ░ ░     
+         ░                              ░ ░     
+`, 'ascii-art');
+                
+                output(`GOLDEN KEY SOCIETY TERMINAL v3.7.2
+A DIVISION OF TEMPORAL OVERSIGHT & DIMENSIONAL EXPLORATION
+
+ESTABLISHED 1952 | CLASSIFIED: LEVEL ALPHA
+
+WARNING: Unauthorized access to this system is prohibited.
+Temporal manipulation without proper clearance is a violation
+of the Trans-Dimensional Accord of 1954.
+
+Type 'help' for available commands.
+Type 'navigation' for file system instructions.`);
+
+                // Fullscreen button
+                fullscreenBtn.addEventListener('click', () => {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            output(`Error attempting to enable fullscreen: ${err.message}`, 'error');
+                        });
+                        fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                    } else {
+                        document.exitFullscreen();
+                        fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                    }
+                });
+
+                document.addEventListener('fullscreenchange', () => {
+                    if (document.fullscreenElement) {
+                        fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                    } else {
+                        fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                    }
+                });
+
+                // Input handling
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        if (suggestions.textContent) {
+                            input.value = suggestions.textContent;
+                            suggestions.textContent = '';
+                        }
+                    }
+                    else if (e.key === 'Enter') {
+                        const command = input.value.trim();
+                        if (command) {
+                            // Play key sound
+                            keySound.currentTime = 0;
+                            keySound.play().catch(e => console.error('Audio play error:', e));
+
+                            // Add to history
+                            commandHistory.push(command);
+                            historyIndex = commandHistory.length;
+
+                            // Process command
+                            processCommand(command);
+
+                            // Clear input
+                            input.value = '';
+                        }
+                    }
+                    else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (historyIndex > 0) {
+                            historyIndex--;
+                            input.value = commandHistory[historyIndex];
+                        }
+                    }
+                    else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (historyIndex < commandHistory.length - 1) {
+                            historyIndex++;
+                            input.value = commandHistory[historyIndex];
+                        } else {
+                            historyIndex = commandHistory.length;
+                            input.value = '';
+                        }
+                    }
+                });
+
+                // Command suggestions
+                input.addEventListener('input', () => {
+                    const val = input.value.trim().toLowerCase();
+                    if (val) {
+                        const commands = [
+                            'help', 'clear', 'date', 'whoami', 'status', 'scan', 
+                            'locations', 'briefing', 'dir', 'type', 'cd', 'login', 
+                            'logout', 'access_core', 'portal_target', 'portal_activate', 
+                            'portal_deactivate', 'override', 'decrypt', 'backdoor',
+                            'echo_trace', 'calibrate', 'contact', 'history_scan', 'navigation'
+                        ];
+                        for (const cmd of commands) {
+                            if (cmd.startsWith(val) && cmd !== val) {
+                                suggestions.textContent = cmd;
+                                return;
+                            }
+                        }
+                    }
+                    suggestions.textContent = '';
+                });
+
+                // Output to terminal
+                function output(text, className = '') {
+                    const output = document.createElement('div');
+                    output.className = `output-line ${className}`;
+                    output.textContent = text;
+                    
+                    // Apply glitch effects if portal is active
+                    if (isPortalActive && Math.random() > 0.7) {
+                        output.classList.add('glitch');
+                        
+                        // Apply heavy glitch occasionally
+                        if (Math.random() > 0.85) {
+                            setTimeout(() => {
+                                output.classList.add('heavy-glitch');
+                                setTimeout(() => {
+                                    output.classList.remove('heavy-glitch');
+                                }, 300);
+                            }, Math.random() * 1000);
+                        }
+                        
+                        // Apply tracking glitch occasionally
+                        if (Math.random() > 0.9) {
+                            setTimeout(() => {
+                                output.classList.add('tracking-glitch');
+                            }, Math.random() * 2000);
+                        }
+                        
+                        // Digital corruption effect
+                        if (Math.random() > 0.85) {
+                            const words = text.split(' ');
+                            if (words.length > 3) {
+                                const randomIndex = Math.floor(Math.random() * words.length);
+                                const corruptedWord = document.createElement('span');
+                                corruptedWord.className = 'digital-corruption';
+                                corruptedWord.setAttribute('data-text', words[randomIndex]);
+                                corruptedWord.textContent = words[randomIndex];
+                                
+                                output.textContent = '';
+                                for (let i = 0; i < words.length; i++) {
+                                    if (i === randomIndex) {
+                                        output.appendChild(corruptedWord);
+                                    } else {
+                                        output.appendChild(document.createTextNode(words[i]));
+                                    }
+                                    if (i < words.length - 1) {
+                                        output.appendChild(document.createTextNode(' '));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    terminal.appendChild(output);
+                    terminal.scrollTop = terminal.scrollHeight;
+                    return output;
+                }
+
+                // Process commands
+                function processCommand(cmd) {
+                    // Display command with prompt
+                    output(`${promptSpan.textContent} ${cmd}`);
+
+                    // Parse command and arguments
+                    const parts = cmd.split(' ');
+                    const command = parts[0].toLowerCase();
+                    const args = parts.slice(1);
+
+                    // Command handling
+                    switch (command) {
+                        case 'help':
+                            showHelp();
+                            break;
+                        case 'clear':
+                            clearTerminal();
+                            break;
+                        case 'date':
+                            showDate();
+                            break;
+                        case 'whoami':
+                            showWhoAmI();
+                            break;
+                        case 'status':
+                            showStatus();
+                            break;
+                        case 'scan':
+                            scanAnomalies();
+                            break;
+                        case 'locations':
+                            showLocations();
+                            break;
+                        case 'briefing':
+                            showBriefing();
+                            break;
+                        case 'ls':
+                        case 'dir':
+                            listFiles(args[0]);
+                            break;
+                        case 'cat':
+                        case 'type':
+                            viewFile(args[0]);
+                            break;
+                        case 'cd':
+                            changeDirectory(args[0]);
+                            break;
+                        case 'login':
+                        case 'access_core':
+                            login();
+                            break;
+                        case 'logout':
+                            logout();
+                            break;
+                        case 'portal_target':
+                            setPortalTarget(args[0], args[1]);
+                            break;
+                        case 'portal_activate':
+                            activatePortal();
+                            break;
+                        case 'portal_deactivate':
+                            deactivatePortal();
+                            break;
+                        case 'navigation':
+                            showNavigation();
+                            break;
+                        // Hidden commands
+                        case 'override':
+                            overrideCommand(args[0]);
+                            break;
+                        case 'decrypt':
+                            decryptFile(args[0], args[1]);
+                            break;
+                        case 'backdoor':
+                            backdoorAccess(args[0]);
+                            break;
+                        case 'echo_trace':
+                            echoTrace(args[0]);
+                            break;
+                        case 'calibrate':
+                            calibrateSystem(args[0]);
+                            break;
+                        case 'contact':
+                            contactHQ(args[0]);
+                            break;
+                        case 'history_scan':
+                            historyScan(args[0]);
+                            break;
+                        default:
+                            // Easter egg - occasionally hint at hidden commands
+                            if (Math.random() > 0.85) {
+                                const randomCmd = getRandomHiddenCommandHint();
+                                output(`Command not recognized: "${command}"${randomCmd}`, 'error');
+                            } else {
+                                output(`Command not recognized: "${command}". Type 'help' for available commands.`, 'error');
+                            }
+                            errorSound.currentTime = 0;
+                            errorSound.play().catch(e => console.error('Audio play error:', e));
+                    }
+                }
+
+                // Command functions
+                function showHelp() {
+                    output(`
+AVAILABLE COMMANDS:
+
+SYSTEM:
+  help                 - Display this help information
+  clear                - Clear terminal screen
+  date                 - Display current date and time
+  whoami               - Display current user information
+  status               - Show system status
+  navigation           - Show file navigation instructions
+
+FILE OPERATIONS:
+  dir                  - List files in current directory
+  cd [directory]       - Change to specified directory
+  cd ..                - Move up one directory level
+  cd \\                 - Return to root directory
+  type [filename]      - Display contents of specified file
+
+PORTAL OPERATIONS:
+  scan                 - Scan for temporal anomalies
+  locations            - List available jump locations
+  briefing             - Display current mission briefing
+  portal_target [type] [destination] - Set portal target
+  portal_activate      - Activate the portal system
+  portal_deactivate    - Shut down the portal system
+
+USER AUTHENTICATION:
+  login                - Authenticate user
+  logout               - End current user session
+
+${isAuthenticated ? 'OPERATOR COMMANDS:' : 'ADDITIONAL COMMANDS AVAILABLE WITH HIGHER CLEARANCE'}
+`);
+                }
+
+                function clearTerminal() {
+                    terminal.innerHTML = '';
+                }
+
+                function showDate() {
+                    const now = new Date();
+                    const formattedDate = now.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    const formattedTime = now.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    
+                    // Calculate a fictional stardate
+                    const year = now.getFullYear() - 1900;
+                    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+                    const stardate = (year + dayOfYear / 365).toFixed(2);
+                    
+                    output(`Current Date: ${formattedDate}
+Current Time: ${formattedTime}
+Stardate: ${stardate}
+Temporal Alignment: Stable
+Dimensional Variance: +0.04%`);
+                }
+
+                function showWhoAmI() {
+                    output(`Current User: ${currentUser}
+Clearance Level: ${isAuthenticated ? '3 - Operator' : '1 - Trainee'}
+Terminal Session: GKS-${Math.floor(Math.random() * 10000)}
+Login Time: ${new Date().toLocaleTimeString('en-US')}
+${isAuthenticated ? 'Portal Access: AUTHORIZED' : 'Portal Access: UNAUTHORIZED'}`);
+                }
+
+                function showStatus() {
+                    const portalState = isPortalActive ? 'ACTIVE' : 'INACTIVE';
+                    const targetInfo = portalTarget ? `${portalTarget.type} - ${portalTarget.destination}` : 'Not Set';
+                    const anomalyIndex = temporalAnomaly.toFixed(2);
+                    
+                    const portalStateOutput = isPortalActive ? 
+                        `<span class="power-btn on"></span>ACTIVE - CAUTION` : 
+                        `<span class="power-btn off"></span>INACTIVE`;
+                    
+                    const outputElem = output(`
+SYSTEM STATUS:
+----------------------------------
+Core Systems................ONLINE
+Quantum Stabilizers.........ONLINE
+Dimensional Anchors.........ONLINE
+Temporal Shielding..........ONLINE
+Crystal Energy Level....${Math.floor(70 + Math.random() * 20)}%
+
+PORTAL STATUS:
+----------------------------------
+Portal State: ${portalStateOutput}
+Target: ${targetInfo}
+Anomaly Index: ${anomalyIndex}${isPortalActive ? ' [RISING]' : ''}
+Stability Matrix: ${isPortalActive ? '87%' : '100%'}
+
+USER INFO:
+----------------------------------
+Current User: ${currentUser}
+Clearance Level: ${isAuthenticated ? '3 - Operator' : '1 - Trainee'}
+Active Session: YES
+${isAuthenticated ? 'Portal Authorization: GRANTED' : 'Portal Authorization: DENIED'}
+
+${isPortalActive ? 'WARNING: Portal is currently active. Maintain system monitoring.' : ''}
+`);
+                    
+                    // Replace HTML elements for power buttons
+                    const regex = /<span class="power-btn (on|off|standby)"><\/span>/g;
+                    outputElem.innerHTML = outputElem.textContent.replace(regex, (match, state) => {
+                        return `<span class="power-btn ${state}"></span>`;
+                    });
+                    
+                    // Add crystal glow effect for crystal energy line
+                    if (outputElem.textContent.includes('Crystal Energy Level')) {
+                        const lines = outputElem.innerHTML.split('\n');
+                        for (let i = 0; i < lines.length; i++) {
+                            if (lines[i].includes('Crystal Energy Level')) {
+                                const parts = lines[i].split('.');
+                                lines[i] = `${parts[0]}.<span class="crystal crystal-glow">${parts[parts.length-1]}</span>`;
+                            }
+                        }
+                        outputElem.innerHTML = lines.join('\n');
+                    }
+                }
+
+                function scanAnomalies() {
+                    output('Initiating temporal anomaly scan...');
+                    
+                    let scanProgress = 0;
+                    const scanInterval = setInterval(() => {
+                        scanProgress += 20;
+                        const progressBar = '[' + '='.repeat(scanProgress / 5) + ' '.repeat(20 - scanProgress / 5) + ']';
+                        output(`Scanning... ${progressBar} ${scanProgress}%`);
+                        
+                        if (scanProgress >= 100) {
+                            clearInterval(scanInterval);
+                            temporalAnomaly = 10 + Math.random() * 60;
+                            
+                            setTimeout(() => {
+                                output(`
+SCAN COMPLETE:
+----------------------------------
+Anomaly Index: ${temporalAnomaly.toFixed(2)}
+Temporal Distortions: ${Math.floor(temporalAnomaly / 10)}
+Dimensional Incursions: ${Math.floor(temporalAnomaly / 15)}
+Reality Coherence: ${(100 - temporalAnomaly / 2).toFixed(1)}%
+
+${temporalAnomaly > 50 ? 'WARNING: Anomaly levels elevated. Exercise caution during portal operations.' : 'STATUS: Anomaly levels within acceptable parameters.'}
+
+${isPortalActive ? 'CAUTION: Active portal is affecting scan accuracy. Results may be unstable.' : ''}
+`, 'success');
+
+                                // Play success sound
+                                successSound.currentTime = 0;
+                                successSound.play().catch(e => console.error('Audio play error:', e));
+                                
+                                // Easter egg - chance to detect something unusual
+                                if (Math.random() > 0.7) {
+                                    setTimeout(() => {
+                                        const crystalDetection = output(`
+UNUSUAL READING DETECTED:
+----------------------------------
+Unknown crystal resonance pattern identified.
+Source: ${Math.random() > 0.5 ? 'Moonbeam Hollow, sector 7' : 'Dimensional boundary layer'}
+Energy signature matches Type-IV temporal crystal formation.
+`, 'crystal');
+                                        
+                                        crystalSound.currentTime = 0;
+                                        crystalSound.play().catch(e => console.error('Audio play error:', e));
+                                    }, 2000);
+                                }
+                            }, 1000);
+                        }
+                    }, 500);
+                }
+
+                function showLocations() {
+                    output(`
+AVAILABLE JUMP LOCATIONS:
+----------------------------------
+1. MOONBEAM MANOR - Base of Operations
+   Coordinates: HOME DIMENSION
+   Status: SECURE
+   Access Level: ALL PERSONNEL
+
+2. MOONBEAM HOLLOW - Dimensional Variant
+   Coordinates: DIM-MBH-1
+   Status: RESTRICTED
+   Access Level: LEVEL 3+
+   Notes: Source of temporal crystals. Time flows differently.
+
+3. LONDON 1888 - Victorian Era
+   Coordinates: TL-18881025
+   Status: OBSERVATION ONLY
+   Access Level: LEVEL 2+
+
+4. PARIS 1789 - French Revolution
+   Coordinates: TL-17890714
+   Status: RESTRICTED
+   Access Level: LEVEL 3+
+
+5. NEW YORK 1929 - Stock Market Crash
+   Coordinates: TL-19291024
+   Status: OBSERVATION ONLY
+   Access Level: LEVEL 2+
+
+6. CRYSTAL CAVERNS - Mining Operation
+   Coordinates: DIM-MBH-1, SUB-SECTOR 7
+   Status: ACTIVE OPERATION
+   Access Level: LEVEL 4+
+   Notes: Protective equipment mandatory
+
+${isAuthenticated ? '' : 'NOTE: Higher clearance required for portal targeting.'}
+`);
+                }
+
+                function showBriefing() {
+                    output(`
+MISSION BRIEFING: CRYSTAL ACQUISITION
+----------------------------------
+DATE: ${new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
+PRIORITY: HIGH
+DESTINATION: Moonbeam Hollow - Crystal Caverns
+
+OBJECTIVE:
+Acquire 2kg of refined Type-IV temporal crystals for Research Division's upcoming experiments on enhanced dimensional stability.
+
+BACKGROUND:
+Recent portal operations have depleted our crystal reserves to critically low levels. Without fresh supply, all time travel operations will cease within 14 days. The Crystal Caverns in Moonbeam Hollow remain our only viable source.
+
+PROTOCOL:
+1. Establish portal link to Moonbeam Hollow
+2. Make contact with Hollow Keeper for access authorization
+3. Proceed to Crystal Caverns with standard mining equipment
+4. Extract specified quantity of crystals
+5. Return immediately upon acquisition
+
+CAUTION:
+- Crystal luminosity indicates potency - prioritize bright blue specimens
+- Avoid prolonged exposure to raw crystals (max 3 hours)
+- All extracted materials must be placed in lead-lined containers
+- DO NOT damage crystal formations - harvest only loose specimens
+
+EQUIPMENT:
+- Temporal shielding gear (mandatory)
+- Gravity displacement tools
+- Crystal resonance detector
+- Standard communication device
+
+AUTHORIZATION:
+Director Hammond, Temporal Operations
+
+${isAuthenticated ? 'PORTAL ACCESS: GRANTED' : 'PORTAL ACCESS: PENDING AUTHENTICATION'}
+`);
+                }
+
+                function listFiles(dirArg) {
+                    // Parse the path
+                    let targetDir = dirArg || '';
+                    let currentDirObj = getCurrentDirectoryObject();
+                    
+                    // If a path is specified, resolve it
+                    if (targetDir) {
+                        if (targetDir === '..') {
+                            if (currentDirectory === '/') {
+                                output('Already at root directory.');
+                                return;
+                            }
+                            // Go up one level
+                            const parts = currentDirectory.split('/').filter(p => p);
+                            parts.pop();
+                            targetDir = '/' + parts.join('/');
+                            if (targetDir === '') targetDir = '/';
+                        } else if (targetDir === '\\' || targetDir === '/') {
+                            targetDir = '/';
+                        } else {
+                            // Resolve relative path
+                            if (!currentDirObj[targetDir]) {
+                                output(`Directory not found: ${targetDir}`, 'error');
+                                return;
+                            }
+                            if (currentDirectory === '/') {
+                                targetDir = '/' + targetDir;
+                            } else {
+                                targetDir = currentDirectory + '/' + targetDir;
+                            }
+                        }
+                        
+                        // Update current dir object based on new path
+                        currentDirObj = getDirectoryObjectFromPath(targetDir);
+                        if (!currentDirObj) {
+                            output(`Directory not found: ${targetDir}`, 'error');
+                            return;
+                        }
+                    }
+                    
+                    // Display files in directory
+                    const dirName = targetDir || currentDirectory;
+                    output(`
+Directory of ${dirName}
+----------------------------------`);
+                    
+                    // Count files and directories
+                    let fileCount = 0;
+                    let dirCount = 0;
+                    
+                    // List parent directory if not at root
+                    if (dirName !== '/') {
+                        output('<DIR>     ..        Parent Directory');
+                        dirCount++;
+                    }
+                    
+                    // List contents
+                    for (const item in currentDirObj) {
+                        if (typeof currentDirObj[item] === 'object') {
+                            output(`<DIR>     ${item.padEnd(10)} Directory`);
+                            dirCount++;
+                        } else {
+                            // Get file size estimate based on content length
+                            const fileContent = currentDirObj[item];
+                            const fileSize = fileContent.length;
+                            const formattedSize = fileSize.toString().padStart(8);
+                            output(`${formattedSize} ${item}`);
+                            fileCount++;
+                        }
+                    }
+                    
+                    output(`
+             ${fileCount} File(s)
+             ${dirCount} Dir(s)
+`);
+                }
+
+                function viewFile(filename) {
+                    if (!filename) {
+                        output('Please specify a file name.', 'error');
+                        return;
+                    }
+                    
+                    const currentDirObj = getCurrentDirectoryObject();
+                    
+                    if (!currentDirObj[filename]) {
+                        output(`File not found: ${filename}`, 'error');
+                        return;
+                    }
+                    
+                    if (typeof currentDirObj[filename] === 'object') {
+                        output(`${filename} is a directory, not a file.`, 'error');
+                        return;
+                    }
+                    
+                    output(`
+File: ${filename}
+----------------------------------`);
+                    output(currentDirObj[filename]);
+                    
+                    // Easter egg - crystal files make sound
+                    if (filename.toLowerCase().includes('crystal')) {
+                        crystalSound.currentTime = 0;
+                        crystalSound.play().catch(e => console.error('Audio play error:', e));
+                    }
+                }
+
+                function changeDirectory(dir) {
+                    if (!dir) {
+                        output(`Current directory: ${currentDirectory}`);
+                        return;
+                    }
+                    
+                    let newPath = '';
+                    
+                    // Handle special cases
+                    if (dir === '/' || dir === '\\') {
+                        newPath = '/';
+                    } else if (dir === '..') {
+                        if (currentDirectory === '/') {
+                            output('Already at root directory.');
+                            return;
+                        }
+                        const parts = currentDirectory.split('/').filter(p => p);
+                        parts.pop();
+                        newPath = '/' + parts.join('/');
+                        if (newPath === '') newPath = '/';
+                    } else {
+                        // Handle relative path
+                        const currentDirObj = getCurrentDirectoryObject();
+                        
+                        if (!currentDirObj[dir]) {
+                            output(`Directory not found: ${dir}`, 'error');
+                            return;
+                        }
+                        
+                        if (typeof currentDirObj[dir] !== 'object') {
+                            output(`${dir} is not a directory.`, 'error');
+                            return;
+                        }
+                        
+                        if (currentDirectory === '/') {
+                            newPath = '/' + dir;
+                        } else {
+                            newPath = currentDirectory + '/' + dir;
+                        }
+                    }
+                    
+                    // Update current directory
+                    currentDirectory = newPath;
+                    output(`Directory changed to: ${currentDirectory}`);
+                }
+
+                function getCurrentDirectoryObject() {
+                    if (currentDirectory === '/') {
+                        return fileSystem;
+                    }
+                    
+                    const parts = currentDirectory.split('/').filter(p => p);
+                    let current = fileSystem;
+                    
+                    for (const part of parts) {
+                        if (current[part] && typeof current[part] === 'object') {
+                            current = current[part];
+                        } else {
+                            return null;
+                        }
+                    }
+                    
+                    return current;
+                }
+
+                function getDirectoryObjectFromPath(path) {
+                    if (path === '/') {
+                        return fileSystem;
+                    }
+                    
+                    const parts = path.split('/').filter(p => p);
+                    let current = fileSystem;
+                    
+                    for (const part of parts) {
+                        if (current[part] && typeof current[part] === 'object') {
+                            current = current[part];
+                        } else {
+                            return null;
+                        }
+                    }
+                    
+                    return current;
+                }
+
+                function login() {
+                    if (isAuthenticated) {
+                        output(`Already authenticated as ${currentUser} (Level 3 - Operator).`);
+                        return;
+                    }
+                    
+                    output('Please enter your access code:');
+                    
+                    // Create password input
+                    const passwordLine = document.createElement('div');
+                    passwordLine.className = 'output-line';
+                    
+                    const passwordPrompt = document.createElement('span');
+                    passwordPrompt.textContent = '> ';
+                    passwordLine.appendChild(passwordPrompt);
+                    
+                    const passwordInput = document.createElement('input');
+                    passwordInput.type = 'password';
+                    passwordInput.className = 'password-input';
+                    passwordInput.autofocus = true;
+                    passwordLine.appendChild(passwordInput);
+                    
+                    terminal.appendChild(passwordLine);
+                    terminal.scrollTop = terminal.scrollHeight;
+                    passwordInput.focus();
+                    
+                    passwordInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            const password = passwordInput.value;
+                            passwordLine.textContent = `> ${'*'.repeat(password.length)}`;
+                            
+                            if (password === 'chronoskey23') {
+                                setTimeout(() => {
+                                    isAuthenticated = true;
+                                    currentUser = 'Operator';
+                                    output('Authentication successful. Welcome, Operator.', 'success');
+                                    output('Portal control systems now available.');
+                                    
+                                    // Play success sound
+                                    successSound.currentTime = 0;
+                                    successSound.play().catch(e => console.error('Audio play error:', e));
+                                    
+                                    // Update prompt
+                                    promptSpan.textContent = 'GKS:OP>';
+                                }, 1000);
+                            } else {
+                                setTimeout(() => {
+                                    output('Authentication failed. Invalid access code.', 'error');
+                                    
+                                    // Play error sound
+                                    errorSound.currentTime = 0;
+                                    errorSound.play().catch(e => console.error('Audio play error:', e));
+                                }, 1000);
+                            }
+                        }
+                    });
+                }
+
+                function logout() {
+                    if (!isAuthenticated) {
+                        output('No active authenticated session.');
+                        return;
+                    }
+                    
+                    if (isPortalActive) {
+                        output('WARNING: Portal is still active. Please deactivate portal before logging out.', 'warning');
+                        return;
+                    }
+                    
+                    isAuthenticated = false;
+                    currentUser = 'Trainee';
+                    output('Logged out successfully. Session terminated.');
+                    promptSpan.textContent = 'GKS>';
+                }
+
+                function setPortalTarget(type, destination) {
+                    if (!isAuthenticated) {
+                        output('ERROR: Authentication required for portal targeting.', 'error');
+                        errorSound.currentTime = 0;
+                        errorSound.play().catch(e => console.error('Audio play error:', e));
+                        return;
+                    }
+                    
+                    if (!type || !destination) {
+                        output('Usage: portal_target [type] [destination]', 'error');
+                        output('Types: time, dimension');
+                        output('Examples: ');
+                        output('  portal_target time 1888-London');
+                        output('  portal_target dimension Moonbeam-Hollow');
+                        return;
+                    }
+                    
+                    // Validate type
+                    if (type !== 'time' && type !== 'dimension') {
+                        output(`Invalid portal type: ${type}. Use 'time' or 'dimension'.`, 'error');
+                        return;
+                    }
+                    
+                    // Set target
+                    portalTarget = { type, destination };
+                    output(`Portal target set: ${type} - ${destination}`, 'success');
+                    
+                    // Special message for moonbeam hollow
+                    if (destination.toLowerCase() === 'moonbeam-hollow') {
+                        output(`
+TARGET DETAILS: MOONBEAM HOLLOW
+----------------------------------
+Dimensional variant of our home reality.
+Time differential: +3.7 days per hour
+Crystal concentration: HIGH
+Anomaly risk level: MODERATE
+
+CAUTION: Maintain contact with Hollow Keeper for safe passage.`);
+                        
+                        // Crystal sound for Moonbeam Hollow
+                        crystalSound.currentTime = 0;
+                        crystalSound.play().catch(e => console.error('Audio play error:', e));
+                    }
+                    
+                    // Success sound
+                    successSound.currentTime = 0;
+                    successSound.play().catch(e => console.error('Audio play error:', e));
+                }
+
+                function activatePortal() {
+                    if (!isAuthenticated) {
+                        output('ERROR: Authentication required for portal activation.', 'error');
+                        errorSound.currentTime = 0;
+                        errorSound.play().catch(e => console.error('Audio play error:', e));
+                        return;
+                    }
+                    
+                    if (!portalTarget) {
+                        output('ERROR: No portal target set. Use portal_target command first.', 'error');
+                        return;
+                    }
+                    
+                    if (isPortalActive) {
+                        output('Portal is already active.', 'warning');
+                        return;
+                    }
+                    
+                    output('Initiating portal activation sequence...');
+                    
+                    let activationProgress = 0;
+                    const activationInterval = setInterval(() => {
+                        activationProgress += 20;
+                        const progressBar = '[' + '='.repeat(activationProgress / 5) + ' '.repeat(20 - activationProgress / 5) + ']';
+                        output(`Activation progress: ${progressBar} ${activationProgress}%`);
+                        
+                        if (activationProgress >= 100) {
+                            clearInterval(activationInterval);
+                            
+                            setTimeout(() => {
+                                isPortalActive = true;
+                                
+                                // Start portal sound
+                                portalSound.loop = true;
+                                portalSound.volume = 0.3;
+                                portalSound.currentTime = 0;
+                                portalSound.play().catch(e => console.error('Audio play error:', e));
+                                
+                                // Add portal effects to DOM
+                                document.body.classList.add('portal-active');
+                                
+                                const crystalDestination = portalTarget.destination.toLowerCase() === 'moonbeam-hollow' || 
+                                                           portalTarget.destination.toLowerCase().includes('crystal');
+                                
+                                // Enhanced activation message with more effects
+                                output(`
+_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+                                                                                
+ █████╗  ██████╗████████╗██╗██╗   ██╗███████╗    ██████╗  ██████╗ ██████╗ ████████╗ █████╗ ██╗     
+██╔══██╗██╔════╝╚══██╔══╝██║██║   ██║██╔════╝    ██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝██╔══██╗██║     
+███████║██║        ██║   ██║██║   ██║█████╗      ██████╔╝██║   ██║██████╔╝   ██║   ███████║██║     
+██╔══██║██║        ██║   ██║╚██╗ ██╔╝██╔══╝      ██╔═══╝ ██║   ██║██╔══██╗   ██║   ██╔══██║██║     
+██║  ██║╚██████╗   ██║   ██║ ╚████╔╝ ███████╗    ██║     ╚██████╔╝██║  ██║   ██║   ██║  ██║███████╗
+╚═╝  ╚═╝ ╚═════╝   ╚═╝   ╚═╝  ╚═══╝  ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝
+                                                                                
+_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+                                                                                
+PORTAL ACTIVATED
+----------------------------------
+Target: ${portalTarget.type.toUpperCase()} - ${portalTarget.destination.toUpperCase()}
+Status: STABLE${crystalDestination ? ' - CRYSTAL RESONANCE DETECTED' : ''}
+Power: 100%
+Temporal Flux: ${(Math.random() * 2 + 3.5).toFixed(2)} TVs
+Dimensional Anchor: LOCKED
+
+${crystalDestination ? 'WARNING: Crystal energy patterns fluctuating. Monitor stability levels.' : ''}
+WARNING: All personnel must maintain safe distance from active portal.
+WARNING: Do not leave portal active for extended periods.
+
+PORTAL IS NOW READY FOR TRANSIT
+`);
+                            }, 1000);
+                        }
+                    }, 800);
+                }
+
+                function deactivatePortal() {
+                    if (!isAuthenticated) {
+                        output('ERROR: Authentication required for portal deactivation.', 'error');
+                        errorSound.currentTime = 0;
+                        errorSound.play().catch(e => console.error('Audio play error:', e));
+                        return;
+                    }
+                    
+                    if (!isPortalActive) {
+                        output('No active portal to deactivate.', 'warning');
+                        return;
+                    }
+                    
+                    output('Initiating portal shutdown sequence...');
+                    
+                    let shutdownProgress = 0;
+                    const shutdownInterval = setInterval(() => {
+                        shutdownProgress += 25;
+                        const progressBar = '[' + '='.repeat(shutdownProgress / 5) + ' '.repeat(20 - shutdownProgress / 5) + ']';
+                        output(`Shutdown progress: ${progressBar} ${shutdownProgress}%`);
+                        
+                        if (shutdownProgress >= 100) {
+                            clearInterval(shutdownInterval);
+                            
+                            setTimeout(() => {
+                                isPortalActive = false;
+                                
+                                // Stop portal sound
+                                portalSound.pause();
+                                portalSound.currentTime = 0;
+                                
+                                // Remove portal effects from DOM
+                                document.body.classList.remove('portal-active');
+                                
+                                output(`
+PORTAL DEACTIVATED
+----------------------------------
+Status: OFFLINE
+Power: 0%
+Temporal Flux: NORMALIZING
+Dimensional Anchor: RELEASED
+
+Portal shutdown complete. Systems returning to standby mode.
+`, 'success');
+                                
+                                // Success sound
+                                successSound.currentTime = 0;
+                                successSound.play().catch(e => console.error('Audio play error:', e));
+                            }, 1000);
+                        }
+                    }, 600);
+                }
+
+                function showNavigation() {
+                    output(`
+FILE SYSTEM NAVIGATION GUIDE:
+----------------------------------
+The GKS Terminal uses a DOS-style hierarchical file system structure.
+
+BASIC CONCEPTS:
+- The file system starts at the root directory '/'
+- Directories contain files and other directories
+- Your current location is shown when using 'dir' command
+
+NAVIGATION COMMANDS:
+
+dir                 - Lists all files and directories in current location
+                      (Shows directories with <DIR> prefix)
+
+cd [directory]      - Changes to specified directory
+                      Example: cd protocols
+
+cd ..               - Moves up one level to parent directory
+                      Example: cd ..
+
+cd \\                - Returns to root directory (same as cd /)
+                      Example: cd \\
+
+type [filename]     - Displays contents of a file
+                      Example: type welcome.txt
+
+TIPS:
+- Current directory path is shown when using 'dir'
+- Use 'dir' with no arguments to see available files/folders
+- To read a file, use 'type filename'
+- File names are case-sensitive
+
+EXAMPLES:
+GKS> dir                      (Lists files in root directory)
+GKS> cd protocols             (Changes to protocols directory)
+GKS> dir                      (Lists files in protocols directory)
+GKS> type portal_operation.txt    (Views contents of file)
+GKS> cd ..                    (Returns to root directory)
+
+`);
+                }
+
+                // Hidden command functions
+                function overrideCommand(code) {
+                    if (code !== 'TIMEFALL-OMEGA') {
+                        output('ERROR: Invalid override code.', 'error');
+                        return;
+                    }
+                    
+                    output('EMERGENCY OVERRIDE ACTIVATED', 'warning');
+                    output('Bypassing standard authentication protocols...');
+                    
+                    setTimeout(() => {
+                        isAuthenticated = true;
+                        currentUser = 'Emergency Operator';
+                        
+                        output('Override successful. Emergency access granted.', 'success');
+                        promptSpan.textContent = 'GKS:EMERGENCY>';
+                        
+                        secretCommandsFound++;
+                        output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                        
+                        successSound.currentTime = 0;
+                        successSound.play().catch(e => console.error('Audio play error:', e));
+                    }, 1500);
+                }
+
+                function decryptFile(filename, key) {
+                    if (!filename || !key) {
+                        output('Usage: decrypt [filename] [key]', 'error');
+                        return;
+                    }
+                    
+                    // Valid keys based on dates from logs
+                    const validKeys = {
+                        'agent_status.dat': '19701103',
+                        'dimensional_theory.pdf': '19701015',
+                        'restricted_zones.dat': '19700619'
+                    };
+                    
+                    // Get file path
+                    const pathParts = filename.split('/');
+                    let targetFilename = pathParts.pop();
+                    let targetPath = pathParts.join('/');
+                    
+                    // If no path provided, use current directory
+                    if (pathParts.length === 0) {
+                        const currentDirObj = getCurrentDirectoryObject();
+                        
+                        if (!currentDirObj[targetFilename]) {
+                            output(`File not found: ${targetFilename}`, 'error');
+                            return;
+                        }
+                        
+                        if (typeof currentDirObj[targetFilename] === 'object') {
+                            output(`${targetFilename} is a directory, not a file.`, 'error');
+                            return;
+                        }
+                        
+                        if (!currentDirObj[targetFilename].includes('[ENCRYPTED FILE]')) {
+                            output(`File is not encrypted: ${targetFilename}`, 'error');
+                            return;
+                        }
+                        
+                        if (!validKeys[targetFilename] || validKeys[targetFilename] !== key) {
+                            output('Decryption failed: Invalid key.', 'error');
+                            return;
+                        }
+                        
+                        output('Decrypting file...');
+                        
+                        setTimeout(() => {
+                            let decryptedContent = '';
+                            
+                            if (targetFilename === 'agent_status.dat') {
+                                decryptedContent = `AGENT STATUS REPORT (DECRYPTED)
+
+ACTIVE FIELD AGENTS - OCTOBER 1970
+----------------------------------
+Miller, J. - STATUS: Active - Last Jump: London 1895
+Thompson, L. - STATUS: Active - Last Jump: Paris 1789
+Davis, R. - STATUS: MISSING - Last Jump: Moonbeam Hollow
+Wilson, K. - STATUS: Active - Last Jump: Vienna 1809
+Moore, T. - STATUS: Active - Last Jump: New York 1929
+Wright, S. - STATUS: On Leave - Crystal exposure treatment
+                                
+INCIDENT REPORT: Agent Davis failed to return from Moonbeam Hollow expedition on June 18. Last transmission mentioned "crystal corruption" and "time loop distortion." Rescue attempts unsuccessful. Hollow Keeper claims no knowledge of agent's whereabouts but suggests searching "where time folds back on itself."
+
+RECOMMENDATION: All future expeditions to Moonbeam Hollow require minimum two-agent teams and enhanced crystal shielding.`;
+                            } else if (targetFilename === 'dimensional_theory.pdf') {
+                                decryptedContent = `DIMENSIONAL THEORY RESEARCH (DECRYPTED)
+
+CHRONO-DIMENSIONAL MECHANICS
+----------------------------------
+Author: Dr. Eleanor Wright
+Classification: LEVEL 4
+
+The multi-dimensional model we've established through observation suggests our universe exists as one layer in a vast array of parallel realities. Moonbeam Hollow represents a dimensional variant that shares geographical similarity with our world but exhibits fundamentally different physical laws.
+
+Key differences in Moonbeam Hollow:
+1. Time progression non-linear (observed ratio approximately 3.7:1)
+2. Quantum uncertainty principle appears to be inverted
+3. Formation of temporal crystals occurs naturally
+4. Matter retains "memory" of previous states
+
+CRYSTAL PROPERTIES:
+The temporal crystals found exclusively in Moonbeam Hollow exhibit remarkable properties that allow for manipulation of spacetime. When properly energized, these crystals create stable Einstein-Rosen bridges between dimensions or time periods.
+
+Our current technology can utilize these crystal properties to:
+- Open stable portals to other times and dimensions
+- Create localized time dilation fields
+- Store temporal energy
+- Shield against paradox effects
+
+THEORETICAL APPLICATIONS:
+If we could synthesize these crystals rather than mining them, we could potentially achieve:
+- Permanent dimensional gateways
+- Temporal viewing without physical transit
+- Paradox protection barriers
+- Controlled time loops for research environments
+
+WARNING: Crystal resonance patterns suggest consciousness or sentience. Further research required.`;
+                            } else if (targetFilename === 'restricted_zones.dat') {
+                                decryptedContent = `RESTRICTED ZONES DATABASE (DECRYPTED)
+
+LOCATIONS UNDER ABSOLUTE QUARANTINE
+----------------------------------
+Authorization: DIRECTOR LEVEL ONLY
+
+1. CHERNOBYL 1986 - TEMPORAL EXCLUSION ZONE
+   Reason: Quantum radiation cascade
+   Notes: Agent Wells created paradox loop, results catastrophic.
+                                
+2. DALLAS 1963 - LOCKED TIMELINE
+   Reason: Multiple intervention attempts
+   Notes: All agents prohibited from this timeline node.
+                                
+3. CRYSTAL NEST - HOLLOW DEEP SECTOR
+   Reason: Extreme temporal instability
+   Notes: Evidence of intelligent crystal formation. All contact forbidden.
+                                
+4. MOONBEAM HOLLOW - CHRONOS RIFT
+   Reason: Time loop collapse
+   Notes: Area where Agent Davis disappeared. Space-time extremely unstable.
+                                
+5. MANHATTAN 1945 - PROJECT OVERLAP
+   Reason: Dimensional bleed
+   Notes: Evidence of another agency with similar technology.
+                                
+WARNING: Any unauthorized access to these zones will result in immediate termination of employment and possibly existence.
+
+DIRECTOR'S NOTE: The Crystal Nest shows signs of developing collective intelligence. The Hollow Keeper has warned that disturbing this formation could have "consequences beyond our comprehension." All research is suspended indefinitely.`;
+                            }
+                            
+                            output(`
+DECRYPTION SUCCESSFUL:
+----------------------------------
+File: ${targetFilename}
+Key: ${key}
+Status: DECRYPTED
+                            
+${decryptedContent}
+`, 'success');
+                            
+                            successSound.currentTime = 0;
+                            successSound.play().catch(e => console.error('Audio play error:', e));
+                            
+                            secretCommandsFound++;
+                            output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                        }, 2000);
+                    }
+                }
+
+                function backdoorAccess(sequence) {
+                    if (sequence !== 'sequence_gamma') {
+                        output('ERROR: Invalid sequence code.', 'error');
+                        return;
+                    }
+                    
+                    output('Activating developer backdoor...', 'warning');
+                    setTimeout(() => {
+                        output(`
+DEVELOPER MODE ACTIVATED
+----------------------------------
+Welcome to Developer Console
+System Access: UNRESTRICTED
+                        
+Available Developer Commands:
+- debug_status: Show system diagnostics
+- reset_anomaly: Reset anomaly values
+- force_activate: Activate portal without checks
+- crystal_enhance: Boost crystal resonance
+                        
+WARNING: Developer mode operations are not logged
+`, 'success');
+                        
+                        // Add developer mode
+                        isAuthenticated = true;
+                        currentUser = 'Developer';
+                        promptSpan.textContent = 'GKS:DEV>';
+                        
+                        secretCommandsFound++;
+                        output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                        
+                        successSound.currentTime = 0;
+                        successSound.play().catch(e => console.error('Audio play error:', e));
+                    }, 1500);
+                }
+
+                function echoTrace(location) {
+                    if (!location) {
+                        output('Usage: echo_trace [location]', 'error');
+                        return;
+                    }
+                    
+                    output(`Scanning for temporal echoes in location: ${location}...`);
+                    
+                    setTimeout(() => {
+                        if (location.toLowerCase() === 'moonbeam-hollow') {
+                            output(`
+TEMPORAL ECHO DETECTION - MOONBEAM HOLLOW
+----------------------------------
+Multiple echo patterns detected.
+Temporal origin: Various
+Signal strength: Strong
+
+ECHO FRAGMENTS:
+                            
+"...crystal formation growing larger each visit... seems to respond to..."
+                            
+"...Hollow Keeper warned us not to enter the northern cavern, but the readings..."
+                            
+"...Davis reporting. I've found something unusual. The crystals here are forming patterns that..."
+                            
+"...time loop detected. Cannot establish stable return vector. Requesting immediate..."
+                            
+"...they're not just stones, they're alive somehow. I can feel them reaching into my..."
+                            
+WARNING: Some echo patterns show signs of temporal decay. 
+Location exhibits strong dimensional instability.
+`, 'crystal');
+                            
+                            crystalSound.currentTime = 0;
+                            crystalSound.play().catch(e => console.error('Audio play error:', e));
+                        } else if (location.toLowerCase() === 'moonbeam-manor') {
+                            output(`
+TEMPORAL ECHO DETECTION - MOONBEAM MANOR
+----------------------------------
+Minimal echo patterns detected.
+Temporal origin: 1952-1970
+Signal strength: Weak
+
+ECHO FRAGMENTS:
+                            
+"...initial portal tests successful. Manor location ideal due to natural dimensional..."
+                            
+"...Dr. Wright's theory on crystal resonance frequencies proves correct. First stable portal..."
+                            
+"...expansion of sublevel 3 complete. Crystal refinement lab now operational..."
+                            
+Location exhibits strong temporal shielding, limiting echo detection.
+`);
+                        } else {
+                            output(`
+TEMPORAL ECHO DETECTION - ${location.toUpperCase()}
+----------------------------------
+No significant echo patterns detected.
+Location may not have temporal significance.
+                            
+Try scanning known temporal hotspots like Moonbeam-Hollow.
+`);
+                        }
+                        
+                        secretCommandsFound++;
+                        output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                    }, 2000);
+                }
+
+                function calibrateSystem(system) {
+                    if (!system) {
+                        output('Usage: calibrate [system]', 'error');
+                        output('Available systems: quantum_stabilizer, dimensional_anchor, crystal_resonator');
+                        return;
+                    }
+                    
+                    const validSystems = ['quantum_stabilizer', 'dimensional_anchor', 'crystal_resonator', 'temporal_shield'];
+                    
+                    if (!validSystems.includes(system)) {
+                        output(`Invalid system: ${system}`, 'error');
+                        output('Available systems: quantum_stabilizer, dimensional_anchor, crystal_resonator, temporal_shield');
+                        return;
+                    }
+                    
+                    output(`Initiating calibration sequence for ${system}...`);
+                    
+                    let calibrationProgress = 0;
+                    const calibrationInterval = setInterval(() => {
+                        calibrationProgress += 20;
+                        const progressBar = '[' + '='.repeat(calibrationProgress / 5) + ' '.repeat(20 - calibrationProgress / 5) + ']';
+                        output(`Calibration progress: ${progressBar} ${calibrationProgress}%`);
+                        
+                        if (calibrationProgress >= 100) {
+                            clearInterval(calibrationInterval);
+                            
+                            setTimeout(() => {
+                                if (system === 'quantum_stabilizer') {
+                                    temporalAnomaly = Math.max(5, temporalAnomaly * 0.7);
+                                    output(`
+CALIBRATION COMPLETE: QUANTUM STABILIZER
+----------------------------------
+Status: OPTIMIZED
+Efficiency: ${(90 + Math.random() * 9).toFixed(1)}%
+Anomaly Index: REDUCED TO ${temporalAnomaly.toFixed(2)}
+                                
+Quantum field harmonics normalized.
+Portal stability improved by 32%.
+`, 'success');
+                                } else if (system === 'dimensional_anchor') {
+                                    output(`
+CALIBRATION COMPLETE: DIMENSIONAL ANCHOR
+----------------------------------
+Status: ALIGNED
+Efficiency: ${(90 + Math.random() * 9).toFixed(1)}%
+Dimensional Drift: CORRECTED
+                                
+Anchor points synchronized.
+Coordinate precision improved by 18%.
+`, 'success');
+                                } else if (system === 'crystal_resonator') {
+                                    output(`
+CALIBRATION COMPLETE: CRYSTAL RESONATOR
+----------------------------------
+Status: TUNED
+Efficiency: ${(90 + Math.random() * 9).toFixed(1)}%
+Resonance Pattern: OPTIMAL
+                                
+Crystal response enhanced.
+Energy consumption reduced by 24%.
+`, 'success');
+                                    
+                                    crystalSound.currentTime = 0;
+                                    crystalSound.volume = 0.7;
+                                    crystalSound.play().catch(e => console.error('Audio play error:', e));
+                                } else if (system === 'temporal_shield') {
+                                    output(`
+CALIBRATION COMPLETE: TEMPORAL SHIELD
+----------------------------------
+Status: FORTIFIED
+Efficiency: ${(90 + Math.random() * 9).toFixed(1)}%
+Shield Integrity: ENHANCED
+                                
+Paradox protection improved.
+Temporal isolation field strengthened by 41%.
+`, 'success');
+                                }
+                                
+                                successSound.currentTime = 0;
+                                successSound.play().catch(e => console.error('Audio play error:', e));
+                                
+                                secretCommandsFound++;
+                                output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                            }, 1000);
+                        }
+                    }, 600);
+                }
+
+                function contactHQ(extension) {
+                    if (!extension) {
+                        output('Usage: contact [extension]', 'error');
+                        return;
+                    }
+                    
+                    if (extension !== 'x7734') {
+                        output('ERROR: Invalid extension code.', 'error');
+                        output('No response from specified extension.');
+                        return;
+                    }
+                    
+                    output('Establishing secure connection to Temporal Control...');
+                    
+                    setTimeout(() => {
+                        output(`
+EMERGENCY CHANNEL: TEMPORAL CONTROL
+----------------------------------
+Status: CONNECTED
+Extension: x7734
+Encryption: ACTIVE
+                        
+OPERATOR: This is Temporal Control. State the nature of your emergency.
+                        
+[Enter message or type 'disconnect' to end communication]
+`, 'success');
+                        
+                        // Create message input
+                        const messageLine = document.createElement('div');
+                        messageLine.className = 'output-line';
+                        
+                        const messagePrompt = document.createElement('span');
+                        messagePrompt.textContent = 'MESSAGE> ';
+                        messageLine.appendChild(messagePrompt);
+                        
+                        const messageInput = document.createElement('input');
+                        messageInput.type = 'text';
+                        messageInput.className = 'password-input';
+                        messageInput.style.width = '80%';
+                        messageInput.autofocus = true;
+                        messageLine.appendChild(messageInput);
+                        
+                        terminal.appendChild(messageLine);
+                        terminal.scrollTop = terminal.scrollHeight;
+                        messageInput.focus();
+                        
+                        messageInput.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                const message = messageInput.value;
+                                messageLine.textContent = `MESSAGE> ${message}`;
+                                
+                                if (message.toLowerCase() === 'disconnect') {
+                                    output('Connection terminated. Channel closed.', 'warning');
+                                } else {
+                                    setTimeout(() => {
+                                        if (message.toLowerCase().includes('crystal') || 
+                                            message.toLowerCase().includes('hollow') ||
+                                            message.toLowerCase().includes('davis')) {
+                                            output(`
+OPERATOR: Information on that topic is restricted. 
+Please submit any crystal anomalies or Hollow-related incidents in writing to Director Hammond.
+Standard protocols apply for all portal operations.
+                                        
+[Connection will automatically terminate in 30 seconds]
+`, 'warning');
+                                        } else if (message.toLowerCase().includes('emergency') || 
+                                                message.toLowerCase().includes('help') ||
+                                                message.toLowerCase().includes('stuck')) {
+                                            output(`
+OPERATOR: Emergency protocol activated. Dispatching recovery team to your coordinates.
+Stay where you are. Do NOT attempt portal transit until team arrives.
+If portal is active, maintain stable configuration. Do not adjust parameters.
+                                        
+[Recovery team estimated arrival: 17 minutes]
+`, 'success');
+                                        } else {
+                                            output(`
+OPERATOR: Message received. No emergency action required.
+Continue with standard procedures and file appropriate documentation upon mission completion.
+                                        
+[Connection will automatically terminate in 30 seconds]
+`);
+                                        }
+                                        
+                                        // Create another message input
+                                        const newMessageLine = document.createElement('div');
+                                        newMessageLine.className = 'output-line';
+                                        
+                                        const newMessagePrompt = document.createElement('span');
+                                        newMessagePrompt.textContent = 'MESSAGE> ';
+                                        newMessageLine.appendChild(newMessagePrompt);
+                                        
+                                        const newMessageInput = document.createElement('input');
+                                        newMessageInput.type = 'text';
+                                        newMessageInput.className = 'password-input';
+                                        newMessageInput.style.width = '80%';
+                                        newMessageInput.autofocus = true;
+                                        newMessageLine.appendChild(newMessageInput);
+                                        
+                                        terminal.appendChild(newMessageLine);
+                                        terminal.scrollTop = terminal.scrollHeight;
+                                        newMessageInput.focus();
+                                        
+                                        newMessageInput.addEventListener('keydown', handleMessageInput);
+                                    }, 1500);
+                                }
+                            }
+                        });
+                        
+                        function handleMessageInput(e) {
+                            if (e.key === 'Enter') {
+                                const message = this.value;
+                                this.parentNode.textContent = `MESSAGE> ${message}`;
+                                
+                                if (message.toLowerCase() === 'disconnect') {
+                                    output('Connection terminated. Channel closed.', 'warning');
+                                    secretCommandsFound++;
+                                    output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                                } else {
+                                    setTimeout(() => {
+                                        output('OPERATOR: Connection timeout. Channel closed.', 'warning');
+                                        secretCommandsFound++;
+                                        output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                                    }, 1000);
+                                }
+                            }
+                        }
+                    }, 2000);
+                }
+
+                function historyScan(date) {
+                    if (!date) {
+                        output('Usage: history_scan [date]', 'error');
+                        output('Example: history_scan 1970');
+                        return;
+                    }
+                    
+                    output(`Scanning temporal records for date: ${date}...`);
+                    
+                    setTimeout(() => {
+                        if (date === '1970') {
+                            output(`
+HISTORICAL SCAN: 1970
+----------------------------------
+Portal Activations: 37
+Primary Destinations:
+- London 1888 (9 jumps)
+- Paris 1789 (5 jumps)
+- Moonbeam Hollow (12 jumps)
+- New York 1929 (7 jumps)
+- Vienna 1809 (4 jumps)
+
+SIGNIFICANT EVENTS:
+JAN 05 - First refined crystal test successful
+MAR 18 - Moonbeam Hollow mining operation established
+JUN 18 - Agent Davis missing in Moonbeam Hollow
+OCT 22 - Advanced portal stabilizer installed
+DEC 03 - Crystal resonance anomaly detected in Sector 7
+                            
+NOTES:
+Increased portal activity to Moonbeam Hollow correlates with crystal acquisition needs.
+Crystal quality from northern caverns significantly higher than previous sources.
+Hollow Keeper expressing concerns about mining expansion.
+`, 'success');
+                        } else if (date === '1952') {
+                            output(`
+HISTORICAL SCAN: 1952
+----------------------------------
+Portal Activations: 7
+Primary Destinations:
+- London 1880 (2 jumps)
+- Moonbeam Hollow (5 jumps)
+
+SIGNIFICANT EVENTS:
+APR 12 - Golden Key Society formally established
+JUN 30 - Dr. Eleanor Wright discovers natural portal in Manor basement
+AUG 15 - First stable portal created using raw crystal sample
+SEP 22 - Initial contact with Hollow Keeper established
+NOV 04 - Construction of sublevel facilities begins
+                            
+NOTES:
+First year of operations. Portal technology extremely experimental.
+Dr. Wright's notes indicate crystal-based nature of dimensional boundaries.
+Hollow Keeper appeared to have prior knowledge of our existence.
+`, 'success');
+                        } else if (date.toLowerCase() === 'davis') {
+                            output(`
+HISTORICAL SCAN: AGENT DAVIS
+----------------------------------
+Personnel File: Robert Davis
+Clearance: Level 3 (Operator)
+Status: MISSING
+
+TIMELINE:
+1968 - Recruited from theoretical physics department, MIT
+1969 - Completed training, assigned to Exploration Team
+1970 - 5 successful missions, promoted to Operator status
+JUN 18, 1970 - Led crystal acquisition mission to Moonbeam Hollow
+JUN 18, 1970 - Last transmission received at 15:42 EST
+                            
+FINAL TRANSMISSION [PARTIAL]:
+"...crystal formation unlike any we've seen. Massive growth in northern cavern...
+...seems to be reacting to our presence...
+...getting strange readings from my timepiece...
+...temporal displacement increasing...
+...they're not just stones, Hammond. I think they're trying to [SIGNAL LOST]"
+                            
+SEARCH STATUS:
+Three recovery missions attempted. No trace found.
+Hollow Keeper claims Davis "walked into the deep time."
+                            
+NOTE: Any personnel encountering signs of Agent Davis to report immediately to Director Hammond.
+`, 'warning');
+                        } else {
+                            output(`
+HISTORICAL SCAN: ${date}
+----------------------------------
+No significant records found for this date period.
+                            
+Available detailed records:
+- 1952 (GKS Founding)
+- 1970 (Current operations)
+- davis (Personnel file)
+`);
+                        }
+                        
+                        secretCommandsFound++;
+                        output(`[Hidden command discovered: ${secretCommandsFound}/${totalSecretCommands}]`, 'crystal');
+                    }, 1800);
+                }
+
+                // Helper function to get random hidden command hint
+                function getRandomHiddenCommandHint() {
+                    const hints = [
+                        ". Have you checked emergency protocols?",
+                        ". Perhaps there's an override somewhere?",
+                        ". File encryption can sometimes be broken with the right key.",
+                        "... System calibration might improve performance.",
+                        ". Communications extensions can be found in emergency documentation.",
+                        ". Temporal echoes sometimes reveal hidden information.",
+                        ". Historical records might contain valuable information."
+                    ];
+                    
+                    return Math.random() > 0.5 ? hints[Math.floor(Math.random() * hints.length)] : '';
+                }
+
+                // Focus input field
+                input.focus();
+                window.addEventListener('click', () => {
+                    input.focus();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
