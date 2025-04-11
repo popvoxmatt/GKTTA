@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Key Society Terminal</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/space-mono@4.5.0/index.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0a0a1a;
+            --text-color: #ffd700;
+            --ascii-color: #c0c0c0;
+            --link-color: #ffa500;
+            --error-color: #ff4545;
+            --success-color: #45ff45;
+            --warning-color: #ffff45;
+            --inactive-color: #777;
+            --scanline-color: rgba(0, 0, 0, 0.1);
+            --glow-color: rgba(255, 215, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: black;
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        #terminal-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            padding: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #terminal {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+            margin-bottom: 10px;
+        }
+
+        #terminal::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        #input-line {
+            display: flex;
+            color: var(--text-color);
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 1rem;
+            width: 100%;
+            position: relative;
+            bottom: 0;
+        }
+
+        #prompt {
+            margin-right: 8px;
+        }
+
+        #input {
+            background: transparent;
+            border: none;
+            outline: none;
+            caret-color: var(--text-color);
+            color: var(--text-color);
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 1rem;
+            flex-grow: 1;
+        }
+
+        .output-line {
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .error {
+            color: var(--error-color);
+        }
+
+        .success {
+            color: var(--success-color);
+        }
+
+        .warning {
+            color: var(--warning-color);
+        }
+
+        .link {
+            color: var(--link-color);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* CRT Effects */
+        .crt::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .crt::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(0, 0, 0, 0) 0%,
+                rgba(0, 0, 0, 0.2) 90%,
+                rgba(0, 0, 0, 0.4) 100%
+            );
+            pointer-events: none;
+            z-index: 9;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                var(--scanline-color) 51%,
+                transparent 51%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 8;
+            opacity: 0.3;
+        }
+
+        .glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 100px var(--glow-color);
+            pointer-events: none;
+            z-index: 7;
+        }
+
+        /* Flickering effect */
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 0.9; }
+            10% { opacity: 0.97; }
+            15% { opacity: 0.92; }
+            20% { opacity: 0.97; }
+            25% { opacity: 0.93; }
+            30% { opacity: 0.97; }
+            35% { opacity: 0.9; }
+            40% { opacity: 0.97; }
+            45% { opacity: 0.94; }
+            50% { opacity: 0.98; }
+            55% { opacity: 0.91; }
+            60% { opacity: 0.97; }
+            65% { opacity: 0.92; }
+            70% { opacity: 0.97; }
+            75% { opacity: 0.93; }
+            80% { opacity: 0.97; }
+            85% { opacity: 0.9; }
+            90% { opacity: 0.97; }
+            95% { opacity: 0.96; }
+            100% { opacity: 0.97; }
+        }
+
+        .flicker {
+            animation: flicker 4s infinite;
+        }
+
+        /* Portal active effects */
+        .portal-active #terminal-container {
+            animation: portal-background 3s ease infinite;
+        }
+
+        @keyframes portal-background {
+            0% { background-color: var(--bg-color); }
+            50% { background-color: #0f1a3a; }
+            100% { background-color: var(--bg-color); }
+        }
+
+        .portal-active .output-line.glitch {
+            animation: glitch-text 0.4s ease;
+        }
+
+        @keyframes glitch-text {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 1px); color: #a0ffff; }
+            40% { transform: translate(2px, -1px); color: var(--text-color); }
+            60% { transform: translate(-1px, -1px); color: #ff9900; }
+            80% { transform: translate(1px, 1px); color: var(--text-color); }
+            100% { transform: translate(0); }
+        }
+
+        .portal-active .heavy-glitch {
+            animation: heavy-glitch 0.2s ease infinite;
+        }
+
+        @keyframes heavy-glitch {
+            0% { transform: translate(0); opacity: 1; }
+            10% { transform: translate(-5px, 2px); opacity: 0.8; }
+            20% { transform: translate(5px, -2px); opacity: 0.9; }
+            30% { transform: translate(-3px, -3px); opacity: 0.7; }
+            40% { transform: translate(3px, 3px); opacity: 0.9; }
+            50% { transform: translate(-2px, -1px); opacity: 0.8; }
+            60% { transform: translate(2px, 1px); opacity: 1; }
+            70% { transform: translate(-1px, 2px); opacity: 0.9; }
+            80% { transform: translate(1px, -2px); opacity: 0.8; }
+            90% { transform: translate(-2px, 1px); opacity: 0.9; }
+            100% { transform: translate(0); opacity: 1; }
+        }
+
+        /* Full screen button */
+        #fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--inactive-color);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            z-index: 20;
+            transition: color 0.3s;
+            font-size: 1.2rem;
+        }
+
+        #fullscreen-btn:hover {
+            color: var(--text-color);
+        }
+
+        /* Password input field */
+        .password-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-color);
+            font-family: 'Space Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 1rem;
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-color);
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Power button effect */
+        .power-btn {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #333;
+            border-radius: 50%;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .power-btn.on {
+            background-color: var(--success-color);
+            box-shadow: 0 0 5px var(--success-color);
+        }
+
+        .power-btn.off {
+            background-color: var(--error-color);
+            box-shadow: 0 0 5px var(--error-color);
+        }
+
+        .power-btn.standby {
+            background-color: var(--warning-color);
+            box-shadow: 0 0 5px var(--warning-color);
+        }
+
+        /* Command suggestions */
+        #suggestions {
+            color: var(--inactive-color);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        #suggestion-text {
+            cursor: pointer;
+        }
+
+        #suggestion-text:hover {
+            color: var(--text-color);
+        }
+
+        /* Cursor animation */
+        @keyframes blink-cursor {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 0.6em;
+            height: 1em;
+            background-color: var(--text-color);
+            animation: blink-cursor 1s infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        /* For the boot sequence */
+        .boot-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+        }
+
+        .boot-progress {
+            width: 60%;
+            height: 10px;
+            background-color: #222;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .boot-bar {
+            position: absolute;
+            height: 100%;
+            background-color: var(--text-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .boot-text {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        /* Improved bottom spacing */
+        #command-interface {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="boot-sequence" class="boot-animation">
+        <h1 class="text-2xl mb-4">GOLDEN KEY SOCIETY</h1>
+        <h2 class="text-xl mb-4">TERMINAL SYSTEM v3.7.2</h2>
+        <div class="boot-progress">
+            <div id="boot-bar" class="boot-bar"></div>
+        </div>
+        <div id="boot-text" class="boot-text">Initializing system...</div>
+    </div>
+
+    <div id="terminal-container" class="crt">
+        <div class="scanlines"></div>
+        <div class="glow"></div>
+        <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
+        <div id="terminal" class="flicker">
+            <!-- Terminal output will be displayed here -->
+        </div>
+        <div id="command-interface">
+            <div id="input-line">
+                <span id="prompt">GKS></span>
+                <input type="text" id="input" autofocus spellcheck="false">
+            </div>
+            <div id="suggestions">
+                <span id="suggestion-text"></span>
+            </div>
+        </div>
+    </div>
+
+    <audio id="keySound" src="https://cdn.jsdelivr.net/gh/zap-zsh/sounds@master/mechanical-keyboard.mp3" preload="auto"></audio>
+    <audio id="portalSound" src="https://samplefocus.com/samples/ambient-drone-tonal-processed-77" preload="auto"></audio>
+    <audio id="errorSound" src="https://cdn.jsdelivr.net/gh/subarunrun0812/piano-sound/453693__breviceps__error.wav" preload="auto"></audio>
+    <audio id="successSound" src="https://cdn.jsdelivr.net/gh/subarunrun0812/piano-sound/success-1-6297.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Boot sequence
+            const bootBar = document.getElementById('boot-bar');
+            const bootText = document.getElementById('boot-text');
+            const bootSequence = document.getElementById('boot-sequence');
+            
+            const bootMessages = [
+                "Initializing system...",
+                "Loading GKS Core v3.7.2...",
+                "Establishing quantum link...",
+                "Calibrating temporal stabilizers...",
+                "Scanning for anomalies...",
+                "Initializing portal protocols...",
+                "Verifying security parameters...",
+                "Accessing dimensional coordinates...",
+                "Loading user interface...",
+                "Golden Key Society Terminal ready."
+            ];
+            
+            let bootProgress = 0;
+            const bootInterval = setInterval(() => {
+                bootProgress += 10;
+                bootBar.style.width = `${bootProgress}%`;
+                bootText.textContent = bootMessages[bootProgress / 10 - 1];
+                
+                if (bootProgress >= 100) {
+                    clearInterval(bootInterval);
+                    setTimeout(() => {
+                        bootSequence.style.display = 'none';
+                        init();
+                    }, 1000);
+                }
+            }, 600);
+
+            // Variables
+            let commandHistory = [];
+            let historyIndex = -1;
+            let isAuthenticated = false;
+            let currentUser = 'Trainee';
+            let isPortalActive = false;
+            let portalTarget = null;
+            let temporalAnomaly = Math.random() * 100;
+            let secretCommandsFound = 0;
+            let totalSecretCommands = 7;
+            let filesSystem = {
+                'protocols': {
+                    'portal_operation.txt': 'CLASSIFIED: Portal Operation Protocol\n\n1. Authorization required (Level 3+)\n2. Set destination coordinates\n3. Verify temporal integrity\n4. Activate portal\n5. Monitor quantum stability\n6. DO NOT leave portal active for >30 minutes\n7. Deactivate and log all jumps',
+                    'emergency.txt': 'EMERGENCY PROCEDURES:\n\nIn case of temporal collapse:\n1. Deactivate portal IMMEDIATELY\n2. Contact Temporal Control (x7734)\n3. Initiate Protocol Zeta-9\n4. If Zeta-9 fails, use override code: TIMEFALL-OMEGA',
+                    'clearance_levels.txt': 'GKS CLEARANCE LEVELS:\n\nLevel 1: Trainee - Basic system access\nLevel 2: Agent - Field operations\nLevel 3: Operator - Portal activation\nLevel 4: Controller - Dimensional navigation\nLevel 5: Director - Full system access',
+                    'dimensional_theory.pdf': '[ENCRYPTED FILE] - Requires Level 4 clearance'
+                },
+                'logs': {
+                    'jump_log_1970.txt': 'JUMP LOG 1970:\n\nJAN 12 - London 1895 - Agent Miller - Successful\nMAR 04 - Paris 1789 - Agent Thompson - Successful\nJUN 18 - Moonbeam Hollow - Agent Davis - ANOMALY DETECTED\nSEP 23 - Vienna 1809 - Agent Wilson - Successful\nDEC 10 - New York 1929 - Agent Moore - Temporal shift detected',
+                    'incident_report_42.txt': 'INCIDENT REPORT #42:\n\nDate: June 19, 1970\nLocation: Moonbeam Hollow\nAgent: Davis, J.\n\nDuring routine exploration of dimensional variant, agent reported temporal echo effect. Objects appeared to "remember" being moved. Local resident at coordinates MBH-334 (identified as "Hollow Keeper") displayed awareness of our operations. Recommend avoiding this sector until further notice.',
+                    'maintenance_log.txt': 'MAINTENANCE LOG:\n\nMAY 15, 1970 - Quantum stabilizer replaced\nJUL 03, 1970 - Temporal calibration performed\nAUG 28, 1970 - Portal core cooling system upgraded\nOCT 11, 1970 - Dimensional anchor points recalibrated\nNOV 30, 1970 - Emergency shutdown system tested - SUCCESSFUL',
+                    'agent_status.dat': '[ENCRYPTED FILE] - Requires Level 3 clearance'
+                },
+                'locations': {
+                    'moonbeam_manor.txt': 'LOCATION FILE: MOONBEAM MANOR\n\nCoordinates: HOME DIMENSION\nTemporal Access: Unrestricted\nStatus: GKS HEADQUARTERS\nNotes: Primary operations base established 1952. Temporal shielding active. Safe return point for all operations.',
+                    'moonbeam_hollow.txt': 'LOCATION FILE: MOONBEAM HOLLOW\n\nCoordinates: DIM-MBH-1\nTemporal Access: RESTRICTED (Auth. Level 3+)\nStatus: UNDER OBSERVATION\nNotes: Dimensional variant of Moonbeam Manor location. Exhibits temporal anomalies. Time flows differently. Known entities: "The Hollow Keeper", "The Clockmaker". Extreme caution advised.',
+                    'london_1888.txt': 'LOCATION FILE: LONDON 1888\n\nCoordinates: TL-18881025\nTemporal Access: Authorized\nStatus: OBSERVATION ONLY\nNotes: Victorian era. High fog levels provide good cover. Avoid Scotland Yard. Known historical figures active in area. Paradox risk: MODERATE.',
+                    'restricted_zones.dat': '[ENCRYPTED FILE] - Requires Level 5 clearance'
+                },
+                'training': {
+                    'welcome.txt': 'WELCOME TO THE GOLDEN KEY SOCIETY\n\nYou have been selected due to your exceptional abilities and discretion. Our organization monitors and maintains the integrity of the temporal and dimensional continuum.\n\nYour training will commence with basic system operations before advancing to field agent protocols. Remember our primary directive: Observe, don\'t interfere.\n\nThe consequences of temporal paradoxes cannot be overstated.',
+                    'commands.txt': 'BASIC TERMINAL COMMANDS:\n\nhelp - Display available commands\nstatus - System status report\nls - List files in directory\ncat - View file contents\nlocations - View available jump points\nportal_target - Set jump destination\nportal_activate - Activate portal\nportal_deactivate - Shut down portal\nscan - Check for anomalies\nbriefing - Review mission objectives',
+                    'security_notice.txt': 'SECURITY NOTICE:\n\nAll portal operations require Level 3 clearance. Unauthorized portal access is strictly prohibited and may result in temporal displacement or dimensional instability.\n\nPlease contact your supervisor for proper authorization codes.\n\nRemember: Time is fragile. Handle with care.'
+                }
+            };
+            let currentDirectory = '/';
+            
+            // Terminal initialization
+            function init() {
+                const terminal = document.getElementById('terminal');
+                const input = document.getElementById('input');
+                const fullscreenBtn = document.getElementById('fullscreen-btn');
+                
+                // Display welcome message
+                addOutput("GOLDEN KEY SOCIETY TERMINAL v3.7.2");
+                addOutput("TEMPORAL OPERATIONS DIVISION");
+                addOutput("=========================================");
+                addOutput("WARNING: UNAUTHORIZED ACCESS PROHIBITED");
+                addOutput("TEMPORAL MANIPULATION CLEARANCE REQUIRED");
+                addOutput("=========================================");
+                addOutput(`Current Date: ${formatDate()}`);
+                addOutput(`User: ${currentUser}`);
+                addOutput(`Anomaly Index: ${temporalAnomaly.toFixed(2)}`);
+                addOutput("");
+                addOutput("Type 'help' for available commands.");
+                addOutput("");
+                
+                // Handle input
+                input.addEventListener('keydown', handleInput);
+                
+                // Handle fullscreen
+                fullscreenBtn.addEventListener('click', toggleFullscreen);
+                
+                // Focus input
+                input.focus();
+                
+                // Handle clicks anywhere to focus input
+                document.addEventListener('click', function() {
+                    input.focus();
+                });
+                
+                // Suggestions
+                input.addEventListener('input', handleSuggestions);
+                
+                // Prevent scrolling with arrow keys
+                window.addEventListener('keydown', function(e) {
+                    if([38, 40].indexOf(e.keyCode) > -1) {
+                        e.preventDefault();
+                    }
+                });
+            }
+            
+            // Add output to terminal
+            function addOutput(text, className = '') {
+                const terminal = document.getElementById('terminal');
+                const outputLine = document.createElement('div');
+                outputLine.className = `output-line ${className}`;
+                
+                // Add glitch class randomly when portal is active
+                if (isPortalActive && Math.random() > 0.7) {
+                    outputLine.classList.add('glitch');
+                }
+                
+                outputLine.textContent = text;
+                terminal.appendChild(outputLine);
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                // Play key sound
+                if (Math.random() > 0.7) {
+                    document.getElementById('keySound').volume = 0.2;
+                    document.getElementById('keySound').play();
+                }
+            }
+            
+            // Handle input
+            function handleInput(e) {
+                const input = document.getElementById('input');
+                const suggestionText = document.getElementById('suggestion-text');
+                
+                if (e.key === 'Enter') {
+                    const command = input.value.trim();
+                    
+                    if (command) {
+                        // Add to history and reset index
+                        commandHistory.unshift(command);
+                        historyIndex = -1;
+                        
+                        // Display command
+                        addOutput(`GKS> ${command}`);
+                        
+                        // Process command
+                        processCommand(command);
+                        
+                        // Clear input and suggestions
+                        input.value = '';
+                        suggestionText.textContent = '';
+                    }
+                    
+                    e.preventDefault();
+                } else if (e.key === 'ArrowUp') {
+                    // Navigate history up
+                    if (commandHistory.length > 0) {
+                        historyIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
+                        input.value = commandHistory[historyIndex];
+                        
+                        // Position cursor at end
+                        setTimeout(() => {
+                            input.selectionStart = input.selectionEnd = input.value.length;
+                        }, 0);
+                    }
+                    
+                    e.preventDefault();
+                } else if (e.key === 'ArrowDown') {
+                    // Navigate history down
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        input.value = commandHistory[historyIndex];
+                    } else if (historyIndex === 0) {
+                        historyIndex = -1;
+                        input.value = '';
+                    }
+                    
+                    e.preventDefault();
+                } else if (e.key === 'Tab') {
+                    // Tab completion
+                    if (suggestionText.textContent) {
+                        input.value = suggestionText.textContent;
+                        suggestionText.textContent = '';
+                    }
+                    
+                    e.preventDefault();
+                }
+            }
+            
+            // Handle command suggestions
+            function handleSuggestions(e) {
+                const input = document.getElementById('input');
+                const suggestionText = document.getElementById('suggestion-text');
+                const text = input.value.trim();
+                
+                if (text) {
+                    const availableCommands = [
+                        'help', 'clear', 'date', 'whoami', 'status', 'scan', 'locations',
+                        'briefing', 'ls', 'cat', 'cd', 'login', 'access_core', 'logout',
+                        'portal_target', 'portal_activate', 'portal_deactivate'
+                    ];
+                    
+                    const matches = availableCommands.filter(cmd => cmd.startsWith(text));
+                    
+                    if (matches.length > 0 && matches[0] !== text) {
+                        suggestionText.textContent = matches[0];
+                    } else {
+                        suggestionText.textContent = '';
+                    }
+                } else {
+                    suggestionText.textContent = '';
+                }
+            }
+            
+            // Process command
+            function processCommand(command) {
+                const parts = command.split(' ');
+                const cmd = parts[0].toLowerCase();
+                const args = parts.slice(1);
+                
+                switch(cmd) {
+                    case 'help':
+                        showHelp();
+                        break;
+                    case 'clear':
+                        clearTerminal();
+                        break;
+                    case 'date':
+                        showDate();
+                        break;
+                    case 'whoami':
+                        showUser();
+                        break;
+                    case 'status':
+                        showStatus();
+                        break;
+                    case 'scan':
+                        scanAnomalies();
+                        break;
+                    case 'locations':
+                        showLocations();
+                        break;
+                    case 'briefing':
+                        showBriefing();
+                        break;
+                    case 'ls':
+                        listFiles(args[0]);
+                        break;
+                    case 'cat':
+                        viewFile(args[0]);
+                        break;
+                    case 'cd':
+                        changeDirectory(args[0]);
+                        break;
+                    case 'login':
+                    case 'access_core':
+                        askPassword();
+                        break;
+                    case 'logout':
+                        logout();
+                        break;
+                    case 'portal_target':
+                        setPortalTarget(args[0], args[1]);
+                        break;
+                    case 'portal_activate':
+                        activatePortal();
+                        break;
+                    case 'portal_deactivate':
+                        deactivatePortal();
+                        break;
+                    case 'emergency':
+                        emergencyProtocol();
+                        break;
+                    case 'override':
+                        overrideSystem(args[0]);
+                        break;
+                    case 'timefall-omega':
+                        secretCommand('timefall-omega');
+                        break;
+                    case 'diagnostics':
+                        runDiagnostics();
+                        break;
+                    case 'debug':
+                        debugMode();
+                        break;
+                    case 'easter':
+                        easterEgg();
+                        break;
+                    default:
+                        addOutput(`Command not recognized: ${cmd}`, 'error');
+                        break;
+                }
+            }
+            
+            // Command implementations
+            function showHelp() {
+                addOutput("AVAILABLE COMMANDS:");
+                addOutput("-------------------------------------------------------------------------------");
+                addOutput("help                 - Display this help information");
+                addOutput("clear                - Clear terminal screen");
+                addOutput("date                 - Display current date and time");
+                addOutput("whoami               - Display current user");
+                addOutput("status               - Display system status");
+                addOutput("scan                 - Scan for temporal anomalies");
+                addOutput("locations            - Show available jump locations");
+                addOutput("briefing             - Display mission briefing");
+                addOutput("ls [directory]       - List files in directory");
+                addOutput("cat [file]           - View file contents");
+                addOutput("cd [directory]       - Change directory");
+                
+                if (isAuthenticated) {
+                    addOutput("\nAUTHENTICATED COMMANDS:");
+                    addOutput("-------------------------------------------------------------------------------");
+                    addOutput("portal_target [type] [destination] - Set portal destination");
+                    addOutput("  Example: portal_target dimension Moonbeam-Hollow");
+                    addOutput("  Types: time, dimension");
+                    addOutput("portal_activate    - Activate the portal");
+                    addOutput("portal_deactivate  - Deactivate the portal");
+                    addOutput("logout             - Log out of authenticated session");
+                } else {
+                    addOutput("\nADDITIONAL COMMANDS:");
+                    addOutput("-------------------------------------------------------------------------------");
+                    addOutput("login / access_core - Authenticate for higher clearance");
+                }
+                
+                addOutput("\nNOTE: Some commands may require higher clearance levels");
+            }
+            
+            function clearTerminal() {
+                const terminal = document.getElementById('terminal');
+                terminal.innerHTML = '';
+                addOutput("Terminal cleared.");
+            }
+            
+            function showDate() {
+                const now = new Date();
+                addOutput(`Earth Date: ${formatDate()}`);
+                
+                // Calculate fictional stardate (just for fun)
+                const startYear = 1970;
+                const yearDiff = now.getFullYear() - startYear;
+                const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+                const stardate = (yearDiff * 1000 + dayOfYear * 2.5).toFixed(1);
+                
+                addOutput(`Stardate: ${stardate}`);
+            }
+            
+            function formatDate() {
+                const now = new Date();
+                const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                return `${now.getDate()}-${months[now.getMonth()]}-${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            }
+            
+            function showUser() {
+                addOutput(`Current User: ${currentUser}`);
+                addOutput(`Access Level: ${isAuthenticated ? 'Operator (Level 3)' : 'Trainee (Level 1)'}`);
+                addOutput(`Authentication: ${isAuthenticated ? 'VERIFIED' : 'NONE'}`);
+            }
+            
+            function showStatus() {
+                addOutput("SYSTEM STATUS REPORT");
+                addOutput("-------------------------------------------------------------------------------");
+                addOutput(`Date................: ${formatDate()}`);
+                addOutput(`User................: ${currentUser}`);
+                addOutput(`Authentication......: ${isAuthenticated ? 'VERIFIED' : 'NONE'}`);
+                addOutput(`Portal Status.......: ${isPortalActive ? 'ACTIVE' : 'INACTIVE'}`);
+                if (portalTarget) {
+                    addOutput(`Portal Target.......: ${portalTarget.type.toUpperCase()} - ${portalTarget.destination}`);
+                } else {
+                    addOutput("Portal Target.......: NOT SET");
+                }
+                addOutput(`Temporal Integrity...: ${Math.min(98 + Math.random() * 3, 100).toFixed(1)}%`);
+                addOutput(`Power Levels........: ${Math.min(95 + Math.random() * 5, 100).toFixed(1)}%`);
+                addOutput(`Temporal Anomalies..: ${temporalAnomaly.toFixed(2)}`);
+                addOutput(`Dimensional Stability: ${(100 - temporalAnomaly/2).toFixed(1)}%`);
+                addOutput(`Core Temperature....: ${(20 + Math.random() * 5).toFixed(1)}°C`);
+                
+                if (isPortalActive) {
+                    addOutput("\nWARNING: PORTAL ACTIVE - QUANTUM STABILITY DEGRADING OVER TIME", 'warning');
+                }
+            }
+            
+            function scanAnomalies() {
+                addOutput("Initiating temporal scan...");
+                
+                const spinner = document.createElement('div');
+                spinner.className = 'loading-spinner';
+                document.getElementById('terminal').appendChild(spinner);
+                
+                setTimeout(() => {
+                    spinner.remove();
+                    
+                    // Generate random anomaly reading
+                    temporalAnomaly = Math.min(temporalAnomaly + (Math.random() * 10 - 4), 100);
+                    temporalAnomaly = Math.max(temporalAnomaly, 0);
+                    
+                    addOutput("Scan complete.");
+                    addOutput("-------------------------------------------------------------------------------");
+                    addOutput(`Temporal Anomaly Index: ${temporalAnomaly.toFixed(2)}`);
+                    
+                    if (temporalAnomaly < 20) {
+                        addOutput("Status: STABLE - No significant anomalies detected", 'success');
+                    } else if (temporalAnomaly < 40) {
+                        addOutput("Status: NORMAL - Minor temporal fluctuations detected", 'success');
+                    } else if (temporalAnomaly < 60) {
+                        addOutput("Status: ELEVATED - Moderate temporal distortion detected", 'warning');
+                    } else if (temporalAnomaly < 80) {
+                        addOutput("Status: WARNING - Significant temporal anomalies detected", 'warning');
+                    } else {
+                        addOutput("Status: DANGER - Critical temporal instability detected", 'error');
+                    }
+                    
+                    if (isPortalActive) {
+                        addOutput("\nNOTE: Portal activity contributing to increased readings", 'warning');
+                    }
+                    
+                    // Add specific anomaly details
+                    if (temporalAnomaly > 30) {
+                        addOutput("\nANOMALY DETAILS:");
+                        
+                        if (temporalAnomaly > 70) {
+                            addOutput("- Critical time dilation detected near Moonbeam Hollow", 'error');
+                        }
+                        
+                        if (temporalAnomaly > 50) {
+                            addOutput("- Temporal echo effect observed in vicinity", 'warning');
+                        }
+                        
+                        if (temporalAnomaly > 30) {
+                            addOutput("- Minor chronon particle fluctuations detected", 'warning');
+                        }
+                    }
+                }, 2000);
+            }
+            
+            function showLocations() {
+                addOutput("AVAILABLE JUMP LOCATIONS");
+                addOutput("-------------------------------------------------------------------------------");
+                addOutput("HOME DIMENSION:");
+                addOutput("- Moonbeam Manor (GKS Headquarters) - UNRESTRICTED");
+                addOutput("\nTIME COORDINATES:");
+                addOutput("- London 1888 - OBSERVATION ONLY");
+                addOutput("- Paris 1789 - OBSERVATION ONLY");
+                addOutput("- Vienna 1809 - OBSERVATION ONLY");
+                addOutput("- New York 1929 - OBSERVATION ONLY");
+                addOutput("\nDIMENSION COORDINATES:");
+                addOutput("- Moonbeam Hollow - RESTRICTED (Level 3+)");
+                
+                if (isAuthenticated) {
+                    addOutput("\nADDITIONAL AUTHORIZED LOCATIONS:");
+                    addOutput("- Cambridge 1952 - RESTRICTED (Operation Timepiece)");
+                    addOutput("- Berlin 1963 - RESTRICTED (Operation Checkmate)");
+                }
+                
+                addOutput("\nTo set destination: portal_target [type] [destination]");
+                addOutput("Example: portal_target dimension Moonbeam-Hollow");
+            }
+            
+            function showBriefing() {
+                addOutput("MISSION BRIEFING");
+                addOutput("-------------------------------------------------------------------------------");
+                addOutput("OPERATION: HOLLOW WATCH");
+                addOutput("CLASSIFICATION: LEVEL 3");
+                addOutput("DATE: 25-OCT-1970");
+                addOutput("LOCATION: MOONBEAM HOLLOW (DIMENSIONAL VARIANT)");
+                addOutput("\nOBJECTIVE:");
+                addOutput("Investigate increasing temporal anomalies within Moonbeam Hollow dimensional variant. Recent readings indicate a potential temporal fracture developing near the Clockmaker's residence.");
+                addOutput("\nPROCEDURE:");
+                addOutput("1. Activate portal to Moonbeam Hollow");
+                addOutput("2. Perform detailed anomaly scan at coordinates MBH-334");
+                addOutput("3. Document any interaction with local entities");
+                addOutput("4. Retrieve any artifacts displaying temporal properties");
+                addOutput("5. Return to Moonbeam Manor base within 3 hours");
+                addOutput("\nNOTE: Extreme caution advised. Do NOT engage with The Hollow Keeper directly. Previous attempts resulted in unexplained memory loss and temporal displacement.");
+            }
+            
+            function listFiles(dir) {
+                let path = dir || currentDirectory;
+                
+                // Handle relative paths
+                if (path === '..') {
+                    if (currentDirectory === '/') {
+                        path = '/';
+                    } else {
+                        const parts = currentDirectory.split('/').filter(Boolean);
+                        parts.pop();
+                        path = '/' + parts.join('/');
+                        if (path !== '/') path += '/';
+                    }
+                } else if (!path.startsWith('/')) {
+                    path = (currentDirectory === '/' ? '/' : currentDirectory) + path;
+                }
+                
+                // Ensure trailing slash for directories
+                if (!path.endsWith('/')) path += '/';
+                
+                // Clean up double slashes
+                path = path.replace(/\/\//g, '/');
+                
+                // Remove current directory marker
+                path = path.replace(/\/\.\//g, '/');
+                
+                // Get directory contents
+                let contents;
+                if (path === '/') {
+                    addOutput("Directory Listing: /");
+                    addOutput("-------------------------------------------------------------------------------");
+                    addOutput("protocols/");
+                    addOutput("logs/");
+                    addOutput("locations/");
+                    addOutput("training/");
+                } else {
+                    const dirName = path.slice(1, -1); // Remove leading / and trailing /
+                    
+                    if (filesSystem[dirName]) {
+                        addOutput(`Directory Listing: /${dirName}/`);
+                        addOutput("-------------------------------------------------------------------------------");
+                        Object.keys(filesSystem[dirName]).forEach(file => {
+                            addOutput(file);
+                        });
+                    } else {
+                        addOutput(`Directory not found: ${path}`, 'error');
+                    }
+                }
+            }
+            
+            function viewFile(filename) {
+                if (!filename) {
+                    addOutput("Usage: cat [filename]", 'error');
+                    return;
+                }
+                
+                let path = filename;
+                if (!path.startsWith('/')) {
+                    // Relative path
+                    if (currentDirectory === '/') {
+                        // We need to determine which directory to look in
+                        const dir = path.split('/')[0];
+                        if (filesSystem[dir]) {
+                            const file = path.split('/')[1];
+                            if (filesSystem[dir][file]) {
+                                addOutput(`File: /${dir}/${file}`);
+                                addOutput("-------------------------------------------------------------------------------");
+                                addOutput(filesSystem[dir][file]);
+                                return;
+                            }
+                        }
+                    } else {
+                        // We're in a specific directory
+                        const dir = currentDirectory.slice(1, -1); // Remove leading / and trailing /
+                        if (filesSystem[dir] && filesSystem[dir][path]) {
+                            addOutput(`File: /${dir}/${path}`);
+                            addOutput("-------------------------------------------------------------------------------");
+                            addOutput(filesSystem[dir][path]);
+                            return;
+                        }
+                    }
+                } else {
+                    // Absolute path
+                    const parts = path.split('/').filter(Boolean);
+                    if (parts.length === 2) {
+                        const [dir, file] = parts;
+                        if (filesSystem[dir] && filesSystem[dir][file]) {
+                            addOutput(`File: /${dir}/${file}`);
+                            addOutput("-------------------------------------------------------------------------------");
+                            addOutput(filesSystem[dir][file]);
+                            return;
+                        }
+                    }
+                }
+                
+                addOutput(`File not found: ${path}`, 'error');
+            }
+            
+            function changeDirectory(dir) {
+                if (!dir) {
+                    addOutput("Usage: cd [directory]", 'error');
+                    return;
+                }
+                
+                let path = dir;
+                
+                // Handle home directory
+                if (path === '~') {
+                    currentDirectory = '/';
+                    addOutput(`Current directory: ${currentDirectory}`);
+                    return;
+                }
+                
+                // Handle parent directory
+                if (path === '..') {
+                    if (currentDirectory === '/') {
+                        addOutput("Already at root directory.");
+                        return;
+                    } else {
+                        const parts = currentDirectory.split('/').filter(Boolean);
+                        parts.pop();
+                        currentDirectory = '/' + parts.join('/');
+                        if (currentDirectory !== '/') currentDirectory += '/';
+                        addOutput(`Current directory: ${currentDirectory}`);
+                        return;
+                    }
+                }
+                
+                // Handle absolute paths
+                if (path.startsWith('/')) {
+                    if (path === '/') {
+                        currentDirectory = '/';
+                        addOutput(`Current directory: ${currentDirectory}`);
+                        return;
+                    }
+                    
+                    // Remove trailing slash if present
+                    if (path.endsWith('/') && path !== '/') {
+                        path = path.slice(0, -1);
+                    }
+                    
+                    const dirName = path.slice(1); // Remove leading /
+                    
+                    if (filesSystem[dirName]) {
+                        currentDirectory = `/${dirName}/`;
+                        addOutput(`Current directory: ${currentDirectory}`);
+                        return;
+                    } else {
+                        addOutput(`Directory not found: ${path}`, 'error');
+                        return;
+                    }
+                }
+                
+                // Handle relative paths
+                if (currentDirectory === '/') {
+                    if (filesSystem[path]) {
+                        currentDirectory = `/${path}/`;
+                        addOutput(`Current directory: ${currentDirectory}`);
+                        return;
+                    }
+                } else {
+                    // We shouldn't need this case with our simplified file system,
+                    // but including it for completeness
+                    const currentDir = currentDirectory.slice(1, -1);
+                    const newPath = `${currentDir}/${path}`;
+                    if (filesSystem[newPath]) {
+                        currentDirectory = `/${newPath}/`;
+                        addOutput(`Current directory: ${currentDirectory}`);
+                        return;
+                    }
+                }
+                
+                addOutput(`Directory not found: ${path}`, 'error');
+            }
+            
+            function askPassword() {
+                addOutput("AUTHORIZATION REQUIRED");
+                addOutput("Please enter your access code:");
+                
+                const terminal = document.getElementById('terminal');
+                const passwordDiv = document.createElement('div');
+                passwordDiv.className = 'output-line';
+                
+                const passwordPrompt = document.createElement('span');
+                passwordPrompt.textContent = 'GKS [AUTH]> ';
+                passwordDiv.appendChild(passwordPrompt);
+                
+                const passwordInput = document.createElement('input');
+                passwordInput.type = 'password';
+                passwordInput.className = 'password-input';
+                passwordInput.autofocus = true;
+                passwordDiv.appendChild(passwordInput);
+                
+                terminal.appendChild(passwordDiv);
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                passwordInput.focus();
+                passwordInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        const password = passwordInput.value;
+                        passwordInput.disabled = true;
+                        
+                        if (password === 'chronoskey23') {
+                            isAuthenticated = true;
+                            currentUser = 'Operator';
+                            addOutput("Authentication successful. Access granted.", 'success');
+                            addOutput(`Welcome, ${currentUser}. You now have Level 3 access.`, 'success');
+                            document.getElementById('successSound').play();
+                        } else {
+                            addOutput("Authentication failed. Invalid access code.", 'error');
+                            document.getElementById('errorSound').play();
+                        }
+                        
+                        document.getElementById('input').focus();
+                        e.preventDefault();
+                    }
+                });
+            }
+            
+            function logout() {
+                if (isAuthenticated) {
+                    isAuthenticated = false;
+                    currentUser = 'Trainee';
+                    addOutput("Logged out successfully. Authorization revoked.", 'warning');
+                    addOutput("Access level reset to Trainee (Level 1).");
+                    
+                    if (isPortalActive) {
+                        deactivatePortal();
+                    }
+                } else {
+                    addOutput("No active session to log out from.", 'error');
+                }
+            }
+            
+            function setPortalTarget(type, destination) {
+                if (!type || !destination) {
+                    addOutput("Usage: portal_target [type] [destination]", 'error');
+                    addOutput("Example: portal_target dimension Moonbeam-Hollow");
+                    return;
+                }
+                
+                if (!isAuthenticated) {
+                    addOutput("Access denied. Level 3 clearance required.", 'error');
+                    document.getElementById('errorSound').play();
+                    return;
+                }
+                
+                // Normalize type
+                type = type.toLowerCase();
+                
+                // Normalize destination
+                destination = destination.replace('-', ' ');
+                
+                // Validate type
+                if (type !== 'time' && type !== 'dimension') {
+                    addOutput(`Invalid target type: ${type}`, 'error');
+                    addOutput("Valid types: time, dimension");
+                    return;
+                }
+                
+                // Validate destination
+                let validDestination = false;
+                
+                if (type === 'time') {
+                    const validTimeDestinations = ['London 1888', 'Paris 1789', 'Vienna 1809', 'New York 1929', 'Cambridge 1952', 'Berlin 1963'];
+                    validDestination = validTimeDestinations.some(d => d.toLowerCase() === destination.toLowerCase());
+                } else if (type === 'dimension') {
+                    const validDimDestinations = ['Moonbeam Hollow', 'Moonbeam Manor'];
+                    validDestination = validDimDestinations.some(d => d.toLowerCase() === destination.toLowerCase());
+                }
+                
+                if (!validDestination) {
+                    addOutput(`Invalid destination: ${destination}`, 'error');
+                    addOutput("Use 'locations' command to see available destinations.");
+                    return;
+                }
+                
+                // Set portal target
+                portalTarget = {
+                    type: type,
+                    destination: destination
+                };
+                
+                addOutput(`Portal target set: ${type.toUpperCase()} - ${destination}`, 'success');
+                document.getElementById('successSound').play();
+                
+                // Add warning for Moonbeam Hollow
+                if (destination.toLowerCase() === 'moonbeam hollow') {
+                    addOutput("\nWARNING: Moonbeam Hollow exhibits high temporal instability.", 'warning');
+                    addOutput("Exercise extreme caution and maintain portal connection for emergency extraction.", 'warning');
+                }
+            }
+            
+            function activatePortal() {
+                if (!isAuthenticated) {
+                    addOutput("Access denied. Level 3 clearance required.", 'error');
+                    document.getElementById('errorSound').play();
+                    return;
+                }
+                
+                if (!portalTarget) {
+                    addOutput("Portal target not set. Use 'portal_target' command first.", 'error');
+                    return;
+                }
+                
+                if (isPortalActive) {
+                    addOutput("Portal already active.", 'warning');
+                    return;
+                }
+                
+                addOutput("Initiating portal activation sequence...");
+                
+                const spinner = document.createElement('div');
+                spinner.className = 'loading-spinner';
+                document.getElementById('terminal').appendChild(spinner);
+                
+                // Play portal sound
+                document.getElementById('portalSound').volume = 0.3;
+                document.getElementById('portalSound').loop = true;
+                document.getElementById('portalSound').play();
+                
+                setTimeout(() => {
+                    spinner.remove();
+                    
+                    addOutput("Quantum stabilizers engaged...");
+                    
+                    setTimeout(() => {
+                        addOutput("Dimensional anchors locked...");
+                        
+                        setTimeout(() => {
+                            addOutput("Temporal field established...");
+                            
+                            setTimeout(() => {
+                                isPortalActive = true;
+                                
+                                addOutput("\nPORTAL ACTIVATED SUCCESSFULLY", 'success');
+                                addOutput(`Target: ${portalTarget.type.toUpperCase()} - ${portalTarget.destination}`, 'success');
+                                addOutput("Temporal stability: NOMINAL", 'success');
+                                
+                                // Add Moonbeam Hollow specific message
+                                if (portalTarget.destination.toLowerCase() === 'moonbeam hollow') {
+                                    addOutput("\nCONNECTION ESTABLISHED WITH MOONBEAM HOLLOW", 'warning');
+                                    addOutput("WARNING: Temporal anomaly readings elevated", 'warning');
+                                    addOutput("Maintain portal connection for emergency extraction");
+                                }
+                                
+                                // Add visual effects
+                                document.body.classList.add('portal-active');
+                                
+                                // Increase anomaly reading
+                                temporalAnomaly += 15 + Math.random() * 10;
+                                temporalAnomaly = Math.min(temporalAnomaly, 100);
+                                
+                                // Add heavy glitch effect to some elements
+                                const terminal = document.getElementById('terminal');
+                                const randomLines = terminal.querySelectorAll('.output-line');
+                                randomLines.forEach(line => {
+                                    if (Math.random() > 0.8) {
+                                        line.classList.add('heavy-glitch');
+                                    }
+                                });
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                }, 2000);
+            }
+            
+            function deactivatePortal() {
+                if (!isPortalActive) {
+                    addOutput("No active portal to deactivate.", 'error');
+                    return;
+                }
+                
+                if (!isAuthenticated) {
+                    addOutput("Access denied. Level 3 clearance required.", 'error');
+                    document.getElementById('errorSound').play();
+                    return;
+                }
+                
+                addOutput("Initiating portal shutdown sequence...");
+                
+                // Stop portal sound
+                document.getElementById('portalSound').pause();
+                
+                const spinner = document.createElement('div');
+                spinner.className = 'loading-spinner';
+                document.getElementById('terminal').appendChild(spinner);
+                
+                setTimeout(() => {
+                    spinner.remove();
+                    
+                    addOutput("Collapsing temporal field...");
+                    
+                    setTimeout(() => {
+                        addOutput("Releasing dimensional anchors...");
+                        
+                        setTimeout(() => {
+                            addOutput("Powering down quantum stabilizers...");
+                            
+                            setTimeout(() => {
+                                isPortalActive = false;
+                                
+                                addOutput("\nPORTAL DEACTIVATED", 'success');
+                                addOutput("All systems returning to normal", 'success');
+                                
+                                // Remove visual effects
+                                document.body.classList.remove('portal-active');
+                                
+                                // Remove heavy glitch effects
+                                const terminal = document.getElementById('terminal');
+                                const glitchLines = terminal.querySelectorAll('.heavy-glitch');
+                                glitchLines.forEach(line => {
+                                    line.classList.remove('heavy-glitch');
+                                });
+                                
+                                // Reduce anomaly reading
+                                temporalAnomaly -= 5 + Math.random() * 5;
+                                temporalAnomaly = Math.max(temporalAnomaly, 0);
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                }, 2000);
+            }
+            
+            function emergencyProtocol() {
+                addOutput("EMERGENCY PROTOCOL INITIATED", 'error');
+                addOutput("-------------------------------------------------------------------------------");
+                
+                if (isPortalActive) {
+                    addOutput("WARNING: Portal active during emergency protocol", 'error');
+                    addOutput("Forced portal shutdown initiated...");
+                    
+                    // Add extreme visual glitching
+                    const terminal = document.getElementById('terminal');
+                    const allLines = terminal.querySelectorAll('.output-line');
+                    allLines.forEach(line => {
+                        line.classList.add('heavy-glitch');
+                    });
+                    
+                    setTimeout(() => {
+                        deactivatePortal();
+                        
+                        setTimeout(() => {
+                            // Remove extreme visual glitching
+                            const allLines = terminal.querySelectorAll('.heavy-glitch');
+                            allLines.forEach(line => {
+                                line.classList.remove('heavy-glitch');
+                            });
+                            
+                            addOutput("Emergency protocol completed.", 'success');
+                            addOutput("System reset to safe state.", 'success');
+                            
+                            // Log the use of emergency protocol
+                            secretCommandsFound++;
+                            addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+                        }, 4000);
+                    }, 2000);
+                } else {
+                    addOutput("Scanning for temporal anomalies...");
+                    addOutput("System diagnostics running...");
+                    
+                    setTimeout(() => {
+                        addOutput("No immediate threats detected.");
+                        addOutput("Emergency protocol completed.");
+                        
+                        // Log the use of emergency protocol
+                        secretCommandsFound++;
+                        addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+                    }, 3000);
+                }
+            }
+            
+            function overrideSystem(code) {
+                if (!code) {
+                    addOutput("Usage: override [code]", 'error');
+                    return;
+                }
+                
+                if (code.toLowerCase() === 'timefall-omega') {
+                    addOutput("OVERRIDE CODE ACCEPTED: TIMEFALL-OMEGA", 'success');
+                    addOutput("-------------------------------------------------------------------------------");
+                    addOutput("EMERGENCY OVERRIDE ENABLED");
+                    
+                    // Force authentication
+                    isAuthenticated = true;
+                    currentUser = 'Emergency Operator';
+                    
+                    // Force portal deactivation if active
+                    if (isPortalActive) {
+                        addOutput("Forced portal shutdown initiated...");
+                        setTimeout(() => {
+                            deactivatePortal();
+                        }, 1000);
+                    }
+                    
+                    addOutput("System reset imminent...");
+                    
+                    // Reset system after delay
+                    setTimeout(() => {
+                        isAuthenticated = false;
+                        currentUser = 'Trainee';
+                        temporalAnomaly = Math.random() * 20;
+                        
+                        addOutput("System reset complete.", 'success');
+                        addOutput("Default user level restored.", 'success');
+                        
+                        // Log secret command discovery
+                        secretCommandsFound++;
+                        addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+                    }, 5000);
+                } else {
+                    addOutput("Invalid override code.", 'error');
+                }
+            }
+            
+            function secretCommand(command) {
+                switch(command.toLowerCase()) {
+                    case 'timefall-omega':
+                        addOutput("CLASSIFIED PROTOCOL: TIMEFALL-OMEGA", 'warning');
+                        addOutput("-------------------------------------------------------------------------------");
+                        addOutput("This protocol is reserved for critical temporal collapse scenarios.");
+                        addOutput("Use 'override timefall-omega' to execute the protocol.");
+                        
+                        // Log secret command discovery
+                        secretCommandsFound++;
+                        addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+                        break;
+                }
+            }
+            
+            function runDiagnostics() {
+                addOutput("Running system diagnostics...");
+                
+                const spinner = document.createElement('div');
+                spinner.className = 'loading-spinner';
+                document.getElementById('terminal').appendChild(spinner);
+                
+                setTimeout(() => {
+                    spinner.remove();
+                    
+                    addOutput("DIAGNOSTIC RESULTS");
+                    addOutput("-------------------------------------------------------------------------------");
+                    addOutput(`Quantum Core............: ${Math.min(95 + Math.random() * 5, 100).toFixed(1)}% OPTIMAL`);
+                    addOutput(`Temporal Stabilizers....: ${Math.min(90 + Math.random() * 10, 100).toFixed(1)}% OPTIMAL`);
+                    addOutput(`Dimensional Anchors.....: ${Math.min(85 + Math.random() * 15, 100).toFixed(1)}% OPTIMAL`);
+                    addOutput(`Portal Interface........: ${Math.min(98 + Math.random() * 2, 100).toFixed(1)}% OPTIMAL`);
+                    addOutput(`Power Systems...........: ${Math.min(92 + Math.random() * 8, 100).toFixed(1)}% OPTIMAL`);
+                    
+                    const overallStatus = Math.min(90 + Math.random() * 10, 100).toFixed(1);
+                    addOutput(`\nOverall System Status...: ${overallStatus}% OPERATIONAL`);
+                    
+                    if (parseFloat(overallStatus) < 95) {
+                        addOutput("\nRECOMMENDATION: Schedule maintenance within next 48 hours", 'warning');
+                    } else {
+                        addOutput("\nAll systems operating within normal parameters", 'success');
+                    }
+                    
+                    // Log secret command discovery
+                    secretCommandsFound++;
+                    addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+                }, 3000);
+            }
+            
+            function debugMode() {
+                addOutput("DEBUG MODE ACTIVATED", 'warning');
+                addOutput("-------------------------------------------------------------------------------");
+                
+                // Display system variables
+                addOutput("SYSTEM VARIABLES:");
+                addOutput(`isAuthenticated: ${isAuthenticated}`);
+                addOutput(`currentUser: ${currentUser}`);
+                addOutput(`isPortalActive: ${isPortalActive}`);
+                addOutput(`portalTarget: ${portalTarget ? JSON.stringify(portalTarget) : 'null'}`);
+                addOutput(`temporalAnomaly: ${temporalAnomaly.toFixed(2)}`);
+                addOutput(`secretCommandsFound: ${secretCommandsFound}/${totalSecretCommands}`);
+                
+                // Add debug options
+                addOutput("\nDEBUG COMMANDS:");
+                addOutput("- override timefall-omega (Emergency reset)");
+                addOutput("- emergency (Emergency protocol)");
+                addOutput("- diagnostics (System diagnostics)");
+                
+                // Log secret command discovery
+                secretCommandsFound++;
+                addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+            }
+            
+            function easterEgg() {
+                addOutput("GKS HISTORICAL ARCHIVES:");
+                addOutput("-------------------------------------------------------------------------------");
+                addOutput("The Golden Key Society was founded in 1952 by Dr. Eleanor Moonbeam after her discovery of dimensional rifts at her family estate, Moonbeam Manor.");
+                addOutput("\nThe original time travel device, known as 'The Chronograph,' was first activated on October 31, 1952, allowing a brief glimpse into Victorian London.");
+                addOutput("\nSince then, the GKS has operated in secret, monitoring and maintaining temporal integrity across multiple timelines and dimensions.");
+                
+                // Log secret command discovery
+                secretCommandsFound++;
+                addOutput(`\nSecret command discovered: ${secretCommandsFound}/${totalSecretCommands}`, 'success');
+                
+                if (secretCommandsFound === totalSecretCommands) {
+                    addOutput("\nALL SECRET COMMANDS DISCOVERED!", 'success');
+                    addOutput("SECURITY OVERRIDE UNLOCKED: Use 'master_key' for full system access", 'success');
+                }
+            }
+            
+            // Toggle fullscreen
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        addOutput(`Error attempting to enable fullscreen: ${err.message}`, 'error');
+                    });
+                    document.getElementById('fullscreen-btn').innerHTML = '<i class="fas fa-compress"></i>';
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                        document.getElementById('fullscreen-btn').innerHTML = '<i class="fas fa-expand"></i>';
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
